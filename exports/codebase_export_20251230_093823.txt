@@ -1,0 +1,4320 @@
+===== CODEBASE EXPORT =====
+Date: 2025-12-30 09:38:23
+Total files: 28
+
+
+================================================================================
+FILE: main.py
+================================================================================
+
+import os
+import sys
+import logging
+from dotenv import load_dotenv
+load_dotenv()
+import uvicorn
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
+
+
+from utils.logging_config import setup_logging
+from endpoints.classifier import router as classifier_router
+from Tools.iso_tool import router as iso_router
+from Tools.continuation_tool import router as continuation_router
+import Tools.compararticket_tool
+from endpoints.session_token import router as session_router
+from endpoints.logsdownload import router as logs_router
+
+
+
+# 🔥 Force-import all tool modules to register them with the registry
+import Tools.ticket_tool
+import Tools.query_tool
+import Tools.semantic_tool
+
+
+# Load env vars
+setup_logging()
+
+REQUIRED_KEYS = [
+    "OPENAI_API_KEY_Clasificador",
+    "OPENAI_API_KEY_Continuada", 
+    "OPENAI_API_KEY_ISO",
+    "OPENAI_API_KEY_Query",
+    "OPENAI_API_KEY_Semantic",
+    "ZELL_API_KEY",
+    "ZELL_USER",
+    "ZELL_PASSWORD"
+]
+
+for key in REQUIRED_KEYS:
+    if not os.getenv(key):
+        logging.warning(f"⚠️ Environment variable missing: {key}")
+        if key == "OPENAI_API_KEY_Clasificador":
+            print(f"ERROR: {key} environment variable is not set!", file=sys.stderr)
+            print("The classifier will not work without a valid API key.", file=sys.stderr)
+            print("Please set this in your .env file.", file=sys.stderr)
+
+app = FastAPI(
+    title="AI Assistant API",
+    description="API for interacting with AI tools for tickets, ISO, and more",
+    version="1.0.0"
+)
+
+# CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    return JSONResponse(
+        status_code=500,
+        content={"detail": f"An unexpected error occurred: {str(exc)}"}
+    )
+
+# Routers
+app.include_router(classifier_router)
+app.include_router(iso_router)
+app.include_router(continuation_router)
+app.include_router(session_router)
+app.include_router(logs_router)
+
+from Tools.compararticket_tool import router as compare_router
+app.include_router(compare_router)
+
+@app.get("/")
+async def root():
+    return {"message": "AI Assistant API is running 💡"}
+
+# Initialize FAISS (semantic search)
+from Tools.semantic_tool import init_semantic_tool
+init_semantic_tool()
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5050))
+    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=False, log_level="info")
+
+
+
+================================================================================
+FILE: endpoints/classifier.py
+================================================================================
+
+from utils.llm_provider import chat_completion
+from utils.llm_config import get_llm_config  # o  config.llm_config
+import os
+import json
+import logging
+import csv
+from datetime import datetime
+from zoneinfo import ZoneInfo
+from fastapi import APIRouter, Request
+from pydantic import BaseModel
+
+from utils.logs import log_interaction, log_ai_call, log_interaction_sqlite, log_to_postgres, log_ai_call_postgres
+from utils.tool_response import ToolResponse, make_error_response
+from utils.contextManager.short_term_memory import (add_to_short_term_memory,
+                                                    get_short_term_memory)
+from utils.contextManager.context_handler import (
+    get_or_create_conversation_id, get_interaction_id, set_user_info)
+from utils.tool_registry import get_tool_by_classification
+from utils.token_verifier import verificar_token
+from utils.prompt_loader import load_latest_prompt
+
+router = APIRouter()
+
+CONV_LOG_PATH = "logs/conversation_sessions.csv"
+os.makedirs("logs", exist_ok=True)
+
+if not os.path.isfile(CONV_LOG_PATH):
+    with open(CONV_LOG_PATH, "w", newline="", encoding="utf-8") as f:
+        writer = csv.writer(f)
+        writer.writerow(
+            ["conversation_id", "token", "user_email", "timestamp_inicio"])
+
+
+def registrar_conversacion_si_no_existe(conversation_id, token, userName):
+    ya_registrado = False
+    registros = []
+    if os.path.isfile(CONV_LOG_PATH):
+        with open(CONV_LOG_PATH, newline="", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                registros.append(row)
+                if row["conversation_id"] == conversation_id:
+                    ya_registrado = True
+    if not ya_registrado:
+        with open(CONV_LOG_PATH, "a", newline="", encoding="utf-8") as f:
+            writer = csv.writer(f)
+            writer.writerow([
+                conversation_id, token, userName,
+                datetime.now(ZoneInfo("America/Mexico_City"))
+            ])
+
+
+class MessageRequest(BaseModel):
+    conversation_id: str
+    user_message: str
+    zToken: str
+    userName: str
+    step_id: int = 1
+    reclassified: bool = False
+
+
+class ClassificationResponse(BaseModel):
+    classification: str
+    confidence_score: float
+    inputs: dict
+    missing_inputs: list
+    follow_up_prompt: str
+
+
+logging.basicConfig(filename="logs/classifier_errors.log",
+                    level=logging.ERROR,
+                    format="%(asctime)s - %(levelname)s - %(message)s")
+
+
+def load_classification_prompt():
+    try:
+        return load_latest_prompt(
+            "Clasificador",  # carpeta Prompts raíz
+            "clasificadorprompt",  # archivo sin carpeta
+            with_filename=True)
+    except Exception as e:
+        logging.error(f"❌ Error loading classification prompt: {e}")
+        return None, "N/A"
+
+
+CLASS_PROMPT_FULL, CLASS_PROMPT_FILE = load_classification_prompt()
+if not CLASS_PROMPT_FULL:
+    logging.warning("⚠️ Clasificator_prompt no fue cargado!")
+#print(f"🔍 [DEBUG] Clasificador usando prompt: {CLASS_PROMPT_FILE}")
+
+
+@router.post("/classify")
+async def classify_message(req: MessageRequest):
+
+    #validation_result = verificar_token(req.zToken)
+    #if not validation_result["continuar"]:
+
+    #msg = (
+    #"Lo siento, parece que el token que estás utilizando está expirado. Intenta recargar el widget."
+    #if "expirado" in validation_result["motivo"].lower()
+    #else "Lo siento, el acceso no está autorizado. Contacta a tu proveedor de servicios para más información."
+    #)
+    #return {
+    #"conversation_id": req.conversation_id,
+    #"interaction_id": 0,
+    #"response": msg,
+    #"error": validation_result["motivo"]
+    #}
+
+    # Si el validador está comentado, crea un resultado dummy
+    validation_result = verificar_token(req.zToken)
+    # si tu verificador no devuelve el userName, lo coges del req:
+    userName = validation_result.get("userName", req.userName)
+    conversation_id = get_or_create_conversation_id(req.conversation_id)
+    interaction_id = get_interaction_id(conversation_id)
+
+    registrar_conversacion_si_no_existe(conversation_id, req.zToken, userName)
+    set_user_info(conversation_id, userName)
+
+    user_message = req.user_message.strip()
+    step_id = req.step_id
+    inputs = req.model_dump()
+
+    try:
+        add_to_short_term_memory(conversation_id, user_message)
+        memory = get_short_term_memory(conversation_id)
+        structured_input = {
+            "user_last_message":
+            memory.get("user_last_message", ""),
+            "bot_last_response":
+            memory.get("bot_last_response", ""),
+            "second_to_last_interaction":
+            memory.get("second_to_last_interaction", ""),
+            "third_to_last_interaction":
+            memory.get("third_to_last_interaction", "")
+        }
+
+        if req.reclassified:
+            structured_input["reclassified"] = True
+
+        messages = [{
+            "role": "system",
+            "content": f"[PROMPT:{CLASS_PROMPT_FILE}]"
+        }, {
+            "role": "system",
+            "content": CLASS_PROMPT_FULL
+        }, {
+            "role": "user",
+            "content": json.dumps(structured_input, ensure_ascii=False)
+        }]
+
+        cfg = get_llm_config("CLASSIFIER")
+        logging.info(f"▶ Usando modelo: {cfg['model']} para TOOL=TU_TOOL")
+        real_model = cfg["model"]
+        logging.info(f"⚙️ CLASSIFIER usando model={real_model}")
+
+        response = await chat_completion(
+            messages,
+            tool="CLASSIFIER",
+            timeout=30,
+            temperature=0,
+            response_format={"type": "json_object"})
+
+        raw_content = response["choices"][0]["message"]["content"].strip()
+        if raw_content.startswith("```json"):
+            raw_content = raw_content.removeprefix("```json").removesuffix(
+                "```").strip()
+
+        try:
+            data = json.loads(raw_content)
+            if not isinstance(data, dict) or "classification" not in data:
+                return make_error_response(
+                    "Respuesta no es un JSON válido o le falta 'classification'."
+                )
+        except Exception as e:
+            logging.error(
+                f"❌ Error parsing classification response: {e}\nRaw:\n{raw_content}"
+            )
+            return make_error_response(
+                "La respuesta del modelo no fue válida. Intenta de nuevo.")
+
+        try:
+            validated = ClassificationResponse(**data)
+            data = validated.model_dump()
+        except Exception as e:
+            logging.error(
+                f"❌ Error validando estructura de clasificación: {e}")
+            return make_error_response("Respuesta mal formada del modelo.")
+
+        classification = data["classification"]
+        confidence_score = data["confidence_score"]
+        inputs = data.get("inputs", {})
+        missing_inputs = data.get("missing_inputs", [])
+        follow_up_prompt = data.get("follow_up_prompt", "")
+
+        # ── Log seguro ──
+        safe_messages = [{
+            "role": "system",
+            "content": f"[PROMPT:{CLASS_PROMPT_FILE}]"
+        }, {
+            "role":
+            "user",
+            "content":
+            json.dumps(structured_input, ensure_ascii=False)[:400]
+        }]
+
+        log_ai_call(
+            call_type="Classification",
+            model=real_model,
+            provider=cfg["provider"].value,  # "openai" o "deepseek"
+            messages=safe_messages,
+            response=data,
+            token_usage=response.get("usage", {}),
+            conversation_id=conversation_id,
+            interaction_id=interaction_id,
+            prompt_file=CLASS_PROMPT_FILE,
+            temperature=0,
+            confidence_score=confidence_score)
+
+        await log_ai_call_postgres(
+            call_type="Classification",
+            model=real_model,
+            provider=cfg["provider"].value,  # "openai" o "deepseek"
+            messages=safe_messages,
+            response=data,
+            token_usage=response.get("usage", {}),
+            conversation_id=conversation_id,
+            interaction_id=interaction_id,
+            prompt_file=CLASS_PROMPT_FILE,
+            temperature=0,
+            confidence_score=confidence_score)
+
+    except Exception as e:
+        print("DEBUG‑EXCEPTION >>", e)
+        logging.error(f"❌ Error clasificando mensaje: {str(e)}")
+        log_interaction(userName=userName,
+                        conversation_id=conversation_id,
+                        interaction_id=interaction_id,
+                        step_id=step_id,
+                        user_input=user_message,
+                        system_output="Error en clasificación",
+                        classification="ERROR",
+                        extra_info="OpenAI Classification Failure")
+        return make_error_response(
+            "Hubo un problema al procesar tu solicitud. Inténtalo más tarde.")
+
+    log_interaction(userName=userName,
+                    conversation_id=conversation_id,
+                    interaction_id=interaction_id,
+                    step_id=step_id,
+                    user_input=user_message,
+                    system_output=json.dumps(data, ensure_ascii=False),
+                    classification=classification,
+                    extra_info="Classifier Response")
+
+    log_interaction_sqlite(userName=userName,
+                           conversation_id=conversation_id,
+                           user_input=user_message,
+                           system_output=json.dumps(data, ensure_ascii=False),
+                           classification=classification,
+                           extra_info="Classifier Response",
+                           timestamp=datetime.now(
+                               ZoneInfo("America/Mexico_City")))
+
+    # Esto dentro de tu función classify_message
+    await log_to_postgres({
+        "conversation_id":
+        conversation_id,
+        "user_name":
+        userName,
+        "user_input":
+        user_message,
+        "system_output":
+        json.dumps(data, ensure_ascii=False),
+        "classification":
+        classification,
+        "extra_info":
+        "Classifier Response",
+        "timestamp":
+        datetime.now(ZoneInfo("America/Mexico_City"))
+    })
+
+    if classification in ["Clasificación Incierta", "No Relacionado"
+                          ] or missing_inputs:
+        return {
+            "conversation_id": conversation_id,
+            "interaction_id": interaction_id,
+            "classification": classification,
+            "response": follow_up_prompt
+            or "Lo siento, no entendí tu pregunta."
+        }
+
+    try:
+        tool_fn = get_tool_by_classification(classification)
+        if not tool_fn:
+            return make_error_response(
+                f"No se encontró herramienta para: {classification}")
+
+        # Mapa explícito según clasificación
+        if classification == "ISO":
+            from Tools.iso_tool import ISORequest
+            iso_request_obj = ISORequest(conversation_id=conversation_id,
+                                         user_question=inputs.get(
+                                             "iso_question", req.user_message),
+                                         step_id=step_id)
+            tool_response = await tool_fn(iso_request_obj, userName)
+
+        elif classification == "Pregunta Continuada":
+            tool_response = await tool_fn(inputs, conversation_id, userName,
+                                          interaction_id)
+
+        elif classification == "Búsqueda Semántica":
+            tool_response = tool_fn(inputs, conversation_id)
+
+        else:
+            tool_response = await tool_fn(inputs, conversation_id,
+                                          interaction_id, userName, step_id)
+
+        # ── Para el resto de herramientas, validación estándar ──
+        validated = ToolResponse.model_validate(tool_response)
+        return {
+            "conversation_id": conversation_id,
+            "interaction_id": interaction_id,
+            "classification": validated.classification,
+            "response": validated.response
+        }
+
+    except Exception as e:
+        logging.error(
+            f"❌ Error ejecutando herramienta ({classification}): {str(e)}")
+        log_interaction(userName=userName,
+                        conversation_id=conversation_id,
+                        interaction_id=interaction_id,
+                        step_id=step_id + 1,
+                        user_input="Error while calling tool",
+                        system_output="Error en ejecución de herramienta",
+                        classification="ERROR",
+                        extra_info=f"Tool call error for {classification}")
+        return make_error_response(
+            "Hubo un problema ejecutando la herramienta. Inténtalo más tarde.")
+
+
+
+================================================================================
+FILE: Tools/continuation_tool.py
+================================================================================
+
+from utils.llm_provider import chat_completion
+from utils.llm_config import get_llm_config
+import os
+import json
+import logging
+import httpx
+from fastapi import APIRouter
+from pydantic import BaseModel
+
+from utils.logs import log_interaction, log_ai_call
+from utils.debug_logger import log_debug_event  # ✅ Corrected import
+
+from utils.contextManager.context_handler import get_context, add_to_context, get_interaction_id
+from utils.contextManager.short_term_memory import get_short_term_memory
+from endpoints.classifier import classify_message, MessageRequest
+from utils.tool_response import ToolResponse, make_error_response
+from utils.prompt_loader import load_latest_prompt
+from utils.tool_registry import register_tool
+
+router = APIRouter()
+
+class ContinuationRequest(BaseModel):
+    conversation_id: str
+    user_question: str
+    step_id: int = 1
+
+# █ Cargamos contenido + nombre de archivo del prompt de continuación
+try:
+    CONTINUATION_PROMPT, CONT_PROMPT_FILE = load_latest_prompt(
+        "Continuada",         # carpeta dentro de Prompts
+        "continuadaprompt",   # prefijo del prompt (sin _v y sin extensión)
+        with_filename=True    # devuelve (texto, nombre_de_archivo)
+    )
+except Exception as e:
+    logging.error(f"❗️ Error loading continuation prompt: {e}")
+    CONTINUATION_PROMPT, CONT_PROMPT_FILE = None, "N/A"
+
+if not CONTINUATION_PROMPT:
+    logging.warning("⚠️ Continuation prompt could not be loaded!")
+
+class TicketRequest(BaseModel):
+    conversation_id: str
+    user_question: str
+    step_id: int = 1  # Valor por defecto si no se envía
+    userName: str
+
+@router.post("/continuation/query")
+@register_tool("Pregunta Continuada")
+async def execute_continuation_query(inputs, conversation_id, userName, interaction_id=None):
+    user_question = inputs.get("user_question", "").strip()
+    step_id = inputs.get("step_id", 1)
+
+    if not user_question:
+        logging.warning("⚠️ User question is empty.")
+        return make_error_response("La pregunta del usuario está vacía.").model_dump()
+
+    if interaction_id is None:
+        interaction_id = get_interaction_id(conversation_id)
+
+    conversation_data   = get_context(conversation_id)
+    short_term_memory   = get_short_term_memory(conversation_id)
+    conversation_history = conversation_data.get("history", [])
+    last_tool           = conversation_data.get("active_tool")
+
+    log_debug_event(
+        "Pregunta Continuada",
+        conversation_id,
+        interaction_id,
+        {
+            "user_question": user_question,
+            "last_tool": last_tool,
+            "short_term_memory": short_term_memory,
+            "conversation_history_length": len(conversation_history)
+        }
+    )
+
+    if not last_tool or not conversation_history:
+        log_interaction(
+            userName=userName,
+            conversation_id=conversation_id,
+            interaction_id=interaction_id,
+            step_id=step_id,
+            user_input=user_question,
+            system_output="No context found for continuation",
+            classification="Pregunta Continuada",
+            extra_info="No previous interaction"
+        )
+        return make_error_response("No entiendo a qué te refieres. ¿Podrías proporcionar más contexto?").model_dump()
+
+    # ── ARMADO DE MENSAJES PARA IA ──
+    ai_messages = []
+
+    # ① Prompt de continuación
+    if CONTINUATION_PROMPT:
+        ai_messages.append({
+            "role": "system",
+            "content": CONTINUATION_PROMPT
+        })
+
+    # ② Si venimos de ISO, inyectamos el prompt ISO más reciente
+    if last_tool == "ISO":
+        try:
+            iso_full, iso_file = load_latest_prompt("ISO", "isoprompt", with_filename=True)
+        except Exception as e:
+            logging.error(f"❌ Error loading ISO prompt for continuation: {e}")
+            iso_full = None
+
+        if iso_full:
+            ai_messages.append({
+                "role": "system",
+                "content": iso_full
+            })
+
+    # ③ Memoria y contexto
+    ai_messages += [
+        {"role": "system", "content": "Aquí está la memoria a corto plazo del usuario:"},
+        {"role": "user",   "content": json.dumps(short_term_memory, ensure_ascii=False, indent=2)},
+        {"role": "system", "content": "Aquí está la historia completa de la conversación hasta ahora:"},
+        {"role": "user",   "content": json.dumps(conversation_history, ensure_ascii=False, indent=2)},
+        {"role": "user",   "content": user_question}
+    ]
+
+    # ④ Filtramos solo contenidos válidos (strings no vacíos)
+    ai_messages = [
+        m for m in ai_messages
+        if isinstance(m.get("content"), str) and m["content"].strip()
+    ]
+
+    # ── Llamada al modelo ───────────────────────────────
+    try:
+        resp = await chat_completion(
+            ai_messages,
+            tool="CONTINUATION",
+            response_format={"type": "json_object"},
+            timeout=30,
+            temperature=1
+        )
+
+        if not resp or not resp.get("choices"):
+            return make_error_response("Respuesta inválida del LLM.").model_dump()
+
+        raw_content = resp["choices"][0]["message"]["content"].strip()
+        if raw_content.startswith("```json"):
+            raw_content = raw_content.removeprefix("```json").removesuffix("```").strip()
+
+        # Parseo seguro
+        try:
+            parsed_result = json.loads(raw_content)
+            if not isinstance(parsed_result, dict):
+                parsed_result = {"message": raw_content, "sufficient_info": False}
+        except json.JSONDecodeError:
+            parsed_result = {"message": raw_content, "sufficient_info": False}
+
+        # ── Decide si contesto o reclasifico ───────────
+        if parsed_result.get("sufficient_info", False):
+            response_message = parsed_result["message"]
+            add_to_context(conversation_id, "Pregunta Continuada",
+                           user_question, response_message)
+            log_interaction(userName, conversation_id, interaction_id, step_id,
+                            user_question, response_message,
+                            "Pregunta Respondida", "Continuada")
+            return ToolResponse(
+                classification="Pregunta Respondida",
+                response=response_message
+            ).model_dump()
+
+        # ←── NO HAY INFO SUFICIENTE: reclasifico aquí mismo ───────────
+        else:
+            new_input = parsed_result.get("message", user_question)
+            log_interaction(
+            userName=userName,
+            conversation_id=conversation_id,
+            interaction_id=interaction_id,
+            step_id=step_id,
+            user_input=user_question,
+            system_output=f"Reclassified Query: {new_input}",
+            classification="Reclassified",
+            extra_info="Continuada"
+        )
+             
+        from utils.token_verifier import recuperar_token_conversation_id
+        token = inputs.get("zToken") or recuperar_token_conversation_id(conversation_id) or "NO-TOKEN"
+        new_request = MessageRequest(
+            userName=userName,
+            conversation_id=conversation_id,
+            user_message=new_input,
+            zToken=token,
+            step_id=step_id + 1,
+            reclassified=True
+        )
+        return await classify_message(new_request)
+
+        # llamamos al clasificador y envolvemos su respuesta
+        #clsf = await classify_message(new_req)
+#text = clsf.get("response", "")
+#return ToolResponse(
+#classification=clsf.get("classification", "Pregunta Continuada"),
+#response=text
+#).model_dump()
+
+    # ── BLOQUES DE EXCEPCIÓN ALINEADOS CON EL try ─────
+#except (httpx.ReadTimeout, httpx.ConnectTimeout) as e:
+#error_msg = f"⏳ API timeout: {e}"
+#log_interaction(conversation_id, interaction_id, step_id,
+#user_question, error_msg, "TIMEOUT", "Continuada")
+#return make_error_response("La operación tomó demasiado tiempo. Intenta de nuevo.").model_dump()
+
+    except Exception as e:
+        err = f"Error en Pregunta Continuada: {e}"
+        logging.error(err)
+        log_interaction(userName, conversation_id, interaction_id, step_id,
+                        user_question, err, "ERROR", "Continuada Failure")
+        return make_error_response(err).model_dump()
+
+
+
+
+
+
+
+
+    
+
+
+
+
+        
+
+
+================================================================================
+FILE: Tools/iso_tool.py
+================================================================================
+
+import openai
+import os
+import json
+import logging
+import httpx
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
+from typing import Optional, Literal
+from dotenv import load_dotenv
+
+from utils.tool_response import ToolResponse, make_error_response
+from utils.logs import log_interaction, log_ai_call, log_ai_call_postgres
+from utils.contextManager.context_handler import add_to_context, get_context, get_interaction_id
+from utils.debug_logger import log_debug_event  # Added debug logger
+from utils.prompt_loader import load_latest_prompt
+from utils.tool_registry import register_tool
+
+router = APIRouter()
+logger = logging.getLogger(__name__)
+
+class ISORequest(BaseModel):
+    conversation_id: str
+    user_question: str
+    step_id: int = 1
+
+load_dotenv()
+PROJECT_ROOT = os.getenv("PROJECT_ROOT_PATH", os.path.abspath(os.path.join(os.getcwd())))
+
+def load_iso_prompt():
+    try:
+        # 1️⃣ Carga el prompt base más reciente (Prompts/ISO/isoprompt_v*.txt)
+        base_prompt, prompt_file = load_latest_prompt("ISO", "isoprompt", with_filename=True)
+        if not base_prompt:
+            raise FileNotFoundError("No se encontró ningún isoprompt_v*.txt en Prompts/ISO")
+
+        kb_files = [
+            "Declaracion_de_Aplicabilidad.txt",
+            "Manual_de_calidad_y_seguridad_de_la_informacion_final.txt"
+        ]
+
+        kb_content = ""
+        kb_folder = os.path.join(PROJECT_ROOT, "knowledgebase/")
+
+        for kb_file in kb_files:
+            kb_path = os.path.join(kb_folder, kb_file)
+            if os.path.isfile(kb_path):
+                with open(kb_path, "r", encoding="utf-8") as f:
+                    content = f.read()
+                    kb_content += f"\n\n=== Inicio de {kb_file} ===\n{content}\n=== Fin de {kb_file} ===\n"
+            else:
+                logger.error(f"❌ Archivo de KB no encontrado: {kb_file}")
+                
+        full_prompt = (
+            f"{base_prompt}\n\n"
+            "A continuación tienes la información completa del knowledgebase ISO:\n"
+            f"{kb_content}"
+        )
+        return full_prompt, prompt_file
+    except Exception as e:
+        logger.error(f"❌ Error loading ISO prompt: {e}")
+        return None, "N/A"
+        
+@router.post("/iso/chat")
+@register_tool("ISO")
+async def iso_chat(req: ISORequest, userName: str):
+    conversation_id = req.conversation_id
+    user_question = req.user_question.strip()
+    step_id = req.step_id
+
+    if not user_question:
+        return make_error_response("La pregunta no puede estar vacía.")
+
+    interaction_id = get_interaction_id(conversation_id)
+    api_key = os.getenv("OPENAI_API_KEY_ISO")
+    if not api_key:
+        logger.error("❌ Falta OPENAI_API_KEY_ISO.")
+        return make_error_response("No se pudo conectar con OpenAI - falta API key.")
+
+    iso_prompt, ISO_PROMPT_FILE = load_iso_prompt()
+    if not iso_prompt:
+        logger.error("❌ No se pudo cargar el ISO prompt en tiempo de ejecución.")
+        return make_error_response("No se pudo cargar el prompt ISO.")
+    
+    client = openai.OpenAI(api_key=api_key)
+    conversation_data = get_context(conversation_id)
+    last_tool = conversation_data.get("active_tool")
+    context_history = conversation_data.get("history", [])
+
+    additional_context = ""
+    if last_tool == "ISO" and context_history:
+        previous_messages = [
+            f"Usuario: {entry['usersinput']} | Bot: {entry['systemoutput']}"
+            for entry in context_history[-3:]
+            if isinstance(entry, dict) and "usersinput" in entry and "systemoutput" in entry
+        ]
+        additional_context = "\n".join(previous_messages)
+
+    messages = [
+        {"role": "system", "content": iso_prompt},
+        {"role": "system", "content": f"Historial relevante:\n{additional_context}"} if additional_context else {},
+        {"role": "user", "content": user_question}
+    ]
+
+    token_estimate = len(iso_prompt.split())
+    log_debug_event(
+        tool="ISO",
+        conversation_id=conversation_id,
+        interaction_id=interaction_id,
+        step="Prompt Construction",
+        input_data={"user_question": user_question},
+        output_data={"token_estimate": token_estimate}
+    )
+
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[msg for msg in messages if msg],
+            response_format={"type": "json_object"},
+            timeout=40,
+            temperature=1
+        )
+
+        raw_content = response.choices[0].message.content.strip()
+
+        log_debug_event(
+            tool="ISO",
+            conversation_id=conversation_id,
+            interaction_id=interaction_id,
+            step="OpenAI Raw",
+            input_data={"response_raw": raw_content}
+        )
+
+        if raw_content.startswith("```json") and raw_content.endswith("```"):
+            raw_content = raw_content.removeprefix("```json").removesuffix("```").strip()
+        elif raw_content.startswith("```") and raw_content.endswith("```"):
+            raw_content = raw_content.removeprefix("```").removesuffix("```").strip()
+
+        log_debug_event(
+            tool="ISO",
+            conversation_id=conversation_id,
+            interaction_id=interaction_id,
+            step="Backtick Handling",
+            input_data={"raw_pre": response.choices[0].message.content.strip()},
+            output_data={"raw_post": raw_content}
+        )
+
+        try:
+            response_json = json.loads(raw_content)
+            actual_response = response_json.get("respuesta", raw_content)
+        except json.JSONDecodeError:
+            logger.error(f"[ISOTool] Failed to parse OpenAI JSON response: {raw_content}")
+            actual_response = "Lo siento, no entendí tu pregunta correctamente."
+
+        log_debug_event(
+            tool="ISO",
+            conversation_id=conversation_id,
+            interaction_id=interaction_id,
+            step="Final Parsing",
+            input_data={},
+            output_data={"response": actual_response}
+        )
+
+        safe_messages = [
+            {"role": "system", "content": f"[PROMPT:{ISO_PROMPT_FILE}]"},
+            {"role": "user",   "content": user_question}
+        ]
+
+        # extrae sólo los campos primitivos que te importan
+        usage = getattr(response, "usage", {})
+        if hasattr(usage, "model_dump"):
+            usage = usage.model_dump()
+        elif hasattr(usage, "__dict__"):
+            usage = usage.__dict__
+        else:
+            usage = {"raw": usage}
+
+        log_ai_call(
+            call_type       = "ISO Answer",
+            model           = "gpt-4o-mini",
+            provider        = "openai",
+            messages        = safe_messages,
+            response        = actual_response,
+            token_usage     = usage,
+            conversation_id = conversation_id,
+            interaction_id  = interaction_id,
+            prompt_file     = ISO_PROMPT_FILE,
+            temperature     = 1
+        )
+
+        await log_ai_call_postgres(
+            call_type       = "ISO Answer",
+            model           = "gpt-4o-mini",
+            provider        = "openai",
+            messages        = safe_messages,
+            response        = actual_response,
+            token_usage     = usage,
+            conversation_id = conversation_id,
+            interaction_id  = interaction_id,
+            prompt_file     = ISO_PROMPT_FILE,
+            temperature     = 1,
+        )
+
+        add_to_context(
+            conversation_id=conversation_id,
+            active_tool="ISO",
+            user_input=user_question,
+            system_output=actual_response
+        )
+
+        log_interaction(
+            userName=userName,
+            conversation_id=conversation_id,
+            interaction_id=interaction_id,
+            step_id=step_id,
+            user_input=user_question,
+            system_output=actual_response,
+            classification="ISO",
+            extra_info="ISO raw GPT data"
+        )
+
+        return ToolResponse(
+            classification="ISO",
+            response=actual_response
+        ).model_dump()
+
+    except Exception as e:
+        error_msg = f"Error in ISO tool: {str(e)}"
+        logger.error(error_msg)
+
+        log_debug_event(
+            tool="ISO",
+            conversation_id=conversation_id,
+            interaction_id=interaction_id,
+            step="EXCEPTION",
+            input_data={"user_question": user_question},
+            output_data={"error": error_msg}
+        )
+
+        log_interaction(
+            userName=userName,
+            conversation_id=conversation_id,
+            interaction_id=interaction_id,
+            step_id=step_id,
+            user_input=user_question,
+            system_output=error_msg,
+            classification="ISO",
+            extra_info="ERROR"
+        )
+        return make_error_response(error_msg)
+
+@router.post("/iso/search")
+async def execute_iso_search(inputs, conversation_id, userName):
+    request_data = ISORequest(
+        conversation_id=conversation_id,
+        user_question=inputs.get("iso_question", "").strip(),
+        step_id=1
+    )
+    return await iso_chat(request_data, userName)
+
+
+
+================================================================================
+FILE: Tools/query_tool.py
+================================================================================
+
+from utils.llm_provider import chat_completion
+from utils.llm_config import get_llm_config
+import os
+import json
+import logging
+import requests
+from fastapi import APIRouter
+from pydantic import BaseModel
+from dotenv import load_dotenv
+
+from utils.tool_response import ToolResponse, make_error_response
+from utils.logs import log_ai_call_postgres, log_interaction, log_ai_call
+from utils.contextManager.context_handler import add_to_context, get_interaction_id
+from utils.debug_logger import log_debug_event
+from utils.prompt_loader import load_latest_prompt
+from utils.tool_registry import register_tool
+
+load_dotenv()
+
+router = APIRouter()
+
+logging.basicConfig(
+    filename="logs/query_tool.log",
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s"
+)
+
+debug_logger = logging.getLogger("debug_logger")
+debug_logger.setLevel(logging.DEBUG)
+dh = logging.FileHandler("logs/debug_tools.log")
+dh.setFormatter(logging.Formatter("[%(asctime)s] [%(levelname)s] [%(name)s] - %(message)s"))
+if not debug_logger.handlers:
+    debug_logger.addHandler(dh)
+
+try:
+    QUERY_PROMPT,    QUERY_PROMPT_FILE    = load_latest_prompt("Query",          "queryprompt",         with_filename=True)
+    ANALYSIS_PROMPT, ANALYSIS_PROMPT_FILE = load_latest_prompt("AnalisisQuery", "analisisqueryprompt", with_filename=True)
+except Exception as e:
+    logging.error(f"❌ Error cargando prompts de Query: {e}")
+    QUERY_PROMPT, ANALYSIS_PROMPT = None, None
+    QUERY_PROMPT_FILE, ANALYSIS_PROMPT_FILE = "N/A", "N/A"
+
+if not (QUERY_PROMPT and ANALYSIS_PROMPT):
+    logging.warning("⚠️ One or more query-related prompts could not be loaded!")
+
+class QueryRequest(BaseModel):
+    conversation_id: str
+    user_question:  str
+    step_id:        int = 1
+
+# ─────────────────────────────────────────────
+@router.post("/query_tool")
+@register_tool("Búsqueda de Query")
+async def execute_query(inputs, conversation_id, interaction_id=None, userName=None, step_id=1):
+    user_question = inputs.get("user_question", "").strip()
+    logging.info(f"📥 New query_tool call | conversation_id={conversation_id}, question={user_question}")
+
+    print("🧪 Revisando interaction_id inicial:", interaction_id)
+
+    if not user_question:
+        return make_error_response("La pregunta no puede estar vacía.")
+    print("🧪 interaction_id inicial:", interaction_id, type(interaction_id))
+    if interaction_id is None:
+        interaction_id = get_interaction_id(conversation_id)
+        try:
+            interaction_id = int(interaction_id)
+        except Exception as e:
+            raise ValueError(f"❌ interaction_id no es entero válido: {interaction_id} | Error: {e}")
+
+    log_interaction( userName, conversation_id, interaction_id, step_id,
+                    user_question, "Generating SQL Query", "Búsqueda de Query")
+
+    # 1️⃣ Generar la consulta SQL
+    sql_response = await generate_sql_query(user_question, conversation_id, interaction_id)
+    if not isinstance(sql_response, dict):
+        return make_error_response("No se pudo generar la consulta SQL.")
+
+    sql_query       = sql_response.get("sql_query", "").strip()
+    sql_description = sql_response.get("mensaje", "")
+
+    if not sql_query or sql_query.lower() == "no viable":
+        return handle_invalid_sql(user_question, conversation_id, interaction_id, step_id)
+
+    # 2️⃣ Ejecutar consulta en Zell
+    api_data, status_code, _, _ = fetch_query_results(sql_query)
+    if api_data is None:
+        return make_error_response("Error llamando API de Zell.")
+    if isinstance(api_data, list) and not api_data:
+        return ToolResponse(classification="Búsqueda de Query",
+                            response="No hay resultados para esa consulta.").model_dump()
+
+    # 3️⃣ Interpretar resultados
+    response_text = await process_query_results(
+        api_data, user_question, sql_query,
+        conversation_id, interaction_id
+    )
+
+    # 4️⃣ Guarda contexto
+    add_to_context(
+        conversation_id, "Búsqueda de Query", user_question, response_text,
+        {"sql_query": sql_query, "query_description": sql_description, "query_results": api_data}
+    )
+
+    return ToolResponse(classification="Búsqueda de Query", response=response_text).model_dump()
+
+# ─────────────────────────────────────────────
+def handle_invalid_sql(user_question, conversation_id, interaction_id, step_id):
+    msg = ("No pude generar una consulta basada en tu pregunta. Puede deberse a que:\n"
+           "🔹 Falta información o la pregunta es ambigua.\n"
+           "🔹 Solicitas datos a los que no tengo acceso.\n"
+           "🔹 Los datos no existen en la base.\n"
+           "Intenta reformularla o agrega más detalle.")
+    log_interaction(userName, conversation_id, interaction_id, step_id,
+                    user_question, "Query Not Viable", "Búsqueda de Query")
+    return ToolResponse(classification="Búsqueda de Query", response=msg).model_dump()
+
+# ─────────────────────────────────────────────
+async def generate_sql_query(user_question, conversation_id, interaction_id):
+    
+    messages = [
+        {"role": "system", "content": QUERY_PROMPT},
+        {"role": "user",   "content": user_question}
+    ]
+    try:
+        llm_resp = await chat_completion(            # 👈 wrapper
+                    messages,
+                    tool="QUERY_SQL",                        # nombre libre
+                    response_format={"type": "json_object"},
+                    temperature=0,
+                    timeout=30
+                )
+        
+        result = json.loads(
+                llm_resp["choices"][0]["message"]["content"].strip()
+                )
+
+        # Log con sólo el nombre del prompt
+        safe_messages = [
+            {"role": "system", "content": f"[PROMPT:{QUERY_PROMPT_FILE}]"},
+            {"role": "user",   "content": user_question}
+        ]
+        cfg = get_llm_config("QUERY")              # modelo / proveedor reales
+
+        log_ai_call(                               # usa tu helper preferido
+            call_type      = "SQL Generation",
+            model          = cfg["model"],         # modelo real (openai o deepseek)
+            provider       = cfg["provider"].value,# nuevo campo en el CSV
+            messages       = safe_messages,
+            response       = result,
+            token_usage    = llm_resp.get("usage", {}),   # ▶︎  cambio: usa llm_resp
+            conversation_id= conversation_id,
+            interaction_id = interaction_id,
+            prompt_file    = QUERY_PROMPT_FILE,
+            temperature    = 0
+        )
+
+        await log_ai_call_postgres(
+            call_type      = "SQL Generation",
+            model          = cfg["model"],         # modelo real (openai o deepseek)
+            provider       = cfg["provider"].value,# nuevo campo en el CSV
+            messages       = safe_messages,
+            response       = result,
+            token_usage    = llm_resp.get("usage", {}),   # ▶︎  cambio: usa llm_resp
+            conversation_id= conversation_id,
+            interaction_id = interaction_id,
+            prompt_file    = QUERY_PROMPT_FILE,
+            temperature    = 0
+        )
+        return result
+
+    except Exception as e:
+        logging.error(f"❌ Exception during SQL generation: {e}")
+        return None
+
+# ─────────────────────────────────────────────
+def fetch_query_results(sql_query):
+    api_url = f"https://tickets.zell.mx/apilink/info?query={sql_query}"
+    headers = {
+        "x-api-key": os.getenv("ZELL_API_KEY"),
+        "user":      os.getenv("ZELL_USER"),
+        "password":  os.getenv("ZELL_PASSWORD"),
+        "action":    "7777"
+    }
+    try:
+        r = requests.get(api_url, headers=headers)
+        r.raise_for_status()
+        return r.json(), r.status_code, {}, headers["action"]
+    except Exception as e:
+        logging.error(f"❌ Zell API error: {e}")
+        return None, 500, {}, headers["action"]
+
+# ─────────────────────────────────────────────
+async def process_query_results(api_data, user_question, sql_query,
+                          conversation_id, interaction_id):
+    payload = (
+        f"Pregunta del usuario: {user_question}\n"
+        f"Consulta SQL ejecutada: {sql_query}\n"
+        f"{json.dumps(api_data, indent=2, default=str)}"
+    )
+    
+    messages = [
+        {"role": "system", "content": ANALYSIS_PROMPT},
+        {"role": "user",   "content": payload}
+    ]
+    try:
+        llm_resp = await chat_completion(
+            messages,
+            tool="QUERY_ANALYSIS",
+            response_format={"type": "json_object"},
+            temperature=0.3,
+            timeout=30
+        )
+        result = json.loads(
+            llm_resp["choices"][0]["message"]["content"].strip()
+        ).get("respuesta")
+
+        safe_messages = [
+            {"role": "system", "content": f"[PROMPT:{ANALYSIS_PROMPT_FILE}]"},
+            {"role": "user",   "content": "[DATA]"}
+        ]
+
+        cfg = get_llm_config("QUERY")
+
+        log_ai_call(
+            call_type      = "Result Analysis",
+            model          = cfg["model"],
+            provider       = cfg["provider"].value,
+            messages       = safe_messages,
+            response       = result,
+            token_usage    = llm_resp.get("usage", {}),
+            conversation_id= conversation_id,
+            interaction_id = interaction_id,
+            prompt_file    = ANALYSIS_PROMPT_FILE,
+            temperature    = 0.3
+        )
+
+        await log_ai_call_postgres(
+            call_type      = "Result Analysis",
+            model          = cfg["model"],
+            provider       = cfg["provider"].value,
+            messages       = safe_messages,
+            response       = result,
+            token_usage    = llm_resp.get("usage", {}),
+            conversation_id= conversation_id,
+            interaction_id = interaction_id,
+            prompt_file    = ANALYSIS_PROMPT_FILE,
+            temperature    = 0.3
+            )
+        
+        return result
+
+    except Exception as e:
+        logging.error(f"❌ Exception during GPT result analysis: {e}")
+        return f"Error procesando los resultados: {e}"
+
+
+================================================================================
+FILE: Tools/semantic_tool.py
+================================================================================
+
+import os
+import faiss
+import numpy as np
+import openai
+import logging
+import httpx
+import asyncio
+import json
+import string
+from datetime import datetime
+
+from utils.logs import log_ai_call, log_zell_api_call, log_ai_call_postgres
+from utils.contextManager.context_handler import get_interaction_id
+from utils.tool_response import ToolResponse, make_error_response
+from utils.tool_registry import register_tool
+from utils.debug_logger import log_debug_event
+from utils.contextManager.context_handler import add_to_context
+from utils.prompt_loader import load_latest_prompt
+
+
+# === Config ===
+OPENAI_API_KEY_SEMANTIC = os.getenv("OPENAI_API_KEY_Semantic")
+FAISS_INDEX_PATH = "Data/faiss_index_ip.bin"
+FAISS_IDS_PATH = "Data/faiss_ids.npy"
+
+ZELL_API_KEY = os.getenv("ZELL_API_KEY", "")
+ZELL_USER = os.getenv("ZELL_USER", "")
+ZELL_PASSWORD = os.getenv("ZELL_PASSWORD", "")
+
+logger = logging.getLogger(__name__)
+
+SEMANTIC_CLASSIFIER_PROMPT, SEMANTIC_CLASSIFIER_PROMPT_FILE = load_latest_prompt(
+    "Semantica",
+    "semanticclasificador",
+    with_filename=True
+)
+
+if not SEMANTIC_CLASSIFIER_PROMPT:
+    logger.warning("⚠️ semanticclasificador no fue cargado!")
+else:
+    logger.info(f"✅ Prompt cargado para semantic_tool: {SEMANTIC_CLASSIFIER_PROMPT_FILE}")
+
+# === Globals ===
+faiss_index = None
+issue_ids = None
+faiss_loaded = False
+logger = logging.getLogger(__name__)
+
+def load_faiss_data():
+    global faiss_index, issue_ids, faiss_loaded
+    if faiss_loaded:
+        return True
+    try:
+        faiss_index = faiss.read_index(FAISS_INDEX_PATH)
+        issue_ids = np.load(FAISS_IDS_PATH).astype("int64")
+        faiss_loaded = True
+        if faiss_index.ntotal != len(issue_ids):
+            logger.warning(f"[SemanticTool] ⚠️ Inconsistencia FAISS: index size={faiss_index.ntotal}, ids={len(issue_ids)}")
+        else:
+            logger.info(f"[SemanticTool] ✅ FAISS cargado: {faiss_index.ntotal} vectores, {len(issue_ids)} IDs")
+        return True
+    except Exception as e:
+        logger.error(f"[SemanticTool] ❌ Falló carga FAISS/IDs: {e}")
+        return False
+
+def init_semantic_tool():
+    openai.api_key = OPENAI_API_KEY_SEMANTIC
+    return load_faiss_data()
+
+def generate_openai_embedding(query, conversation_id, interaction_id):
+    try:
+        log_debug_event("Búsqueda Semántica", conversation_id, interaction_id, "Generate Embedding", {"query": query})
+        resp = openai.embeddings.create(model="text-embedding-ada-002", input=query)
+        vec = np.array(resp.data[0].embedding, dtype="float32").reshape(1, -1)
+        faiss.normalize_L2(vec)
+        return vec
+    except Exception as e:
+        logger.error(f"[SemanticTool] ❌ Error embedding: {e}")
+        log_debug_event("Búsqueda Semántica", conversation_id, interaction_id, "Embedding Error", {"error": str(e)})
+        return None
+
+def perform_faiss_search(vector, k=10):
+    distances, indices = faiss_index.search(vector, k)
+    results = []
+    for i, idx in enumerate(indices[0]):
+        if idx == -1:
+            continue
+        results.append({"ticket_id": int(idx), "score": float(distances[0][i])})
+    return results, {"distances": distances.tolist(), "indices": indices.tolist()}
+
+def second_classifier_via_llm(user_question: str, base_inputs: dict = None, base_confidence: float = 1.0, conversation_id: str = None, interaction_id: int = None ) -> dict:
+    print("📍 [semantic_tool] Entrando a second_classifier_via_llm")
+    print(f"📌 [semantic_tool] base_inputs recibidos: {base_inputs}")
+    try:
+        search_query = (base_inputs or {}).get("search_query", user_question)
+        prompt_text = (
+            f"🔹 Pregunta original del usuario:\n{user_question}\n\n"
+            f"🔹 Búsqueda optimizada para FAISS:\n{search_query}\n\n"
+            + SEMANTIC_CLASSIFIER_PROMPT
+        )
+        print("📝 [semantic_tool] Prompt generado (primeros 1000 caracteres):")
+        print(prompt_text[:1000])
+    except Exception as e:
+        print("❌ [semantic_tool] Error al construir el prompt manual:", e)
+        return {
+            "classification": "Búsqueda Semántica",
+            "confidence_score": base_confidence,
+            "inputs": base_inputs or {"search_query": user_question},
+            "missing_inputs": [],
+            "follow_up_prompt": ""
+        }
+    try:
+        client = openai.OpenAI()
+        resp = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {"role": "system", "content": "Eres un clasificador de preguntas para búsquedas semánticas con filtros SQL."},
+                {"role": "user", "content": prompt_text}
+            ],
+            temperature=0.0
+        )
+
+        print("📥 [semantic_tool] Raw response completa:", resp)
+        content = resp.choices[0].message.content.strip()
+        print("📥 [semantic_tool] Contenido del mensaje:", content)
+
+    except Exception as e:
+        print("❌ [semantic_tool] Error al llamar a OpenAI:", e)
+        return {
+            "classification": "Búsqueda Semántica",
+            "confidence_score": base_confidence,
+            "inputs": base_inputs,
+            "missing_inputs": [],
+            "follow_up_prompt": ""
+        }
+    print("🧠 [semantic_tool] Contenido LLM crudo:", repr(content))
+    if not content:
+        print("⚠️ [semantic_tool] El contenido de la respuesta está vacío")
+        return {
+            "classification": "Búsqueda Semántica",
+            "confidence_score": base_confidence,
+            "inputs": base_inputs,
+            "missing_inputs": [],
+            "follow_up_prompt": ""
+        }
+    if content.startswith("```json"):
+        content = content.removeprefix("```json").removesuffix("```").strip()
+    elif content.startswith("```"):
+        content = content.removeprefix("```").removesuffix("```").strip()
+    try:
+        print("📥 [semantic_tool] Contenido crudo antes del parseo:", repr(content))
+        raw = json.loads(content)
+        print("✅ [semantic_tool] JSON parseado correctamente:", raw)
+    except json.JSONDecodeError as e:
+        print("❌ [semantic_tool] JSON inválido:", repr(content))
+        return {
+            "classification": "Búsqueda Semántica",
+            "confidence_score": base_confidence,
+            "inputs": base_inputs or {"search_query": question},
+            "missing_inputs": [],
+            "follow_up_prompt": ""
+        }
+    llm_out = {
+        "classification": raw.get("classification", "Búsqueda Semántica"),
+        "confidence_score": raw.get("confidence_score", base_confidence),
+        "inputs": raw.get("inputs", base_inputs or {"search_query": question}),
+        "missing_inputs": raw.get("missing_inputs", []),
+        "follow_up_prompt": raw.get("follow_up_prompt", "")
+    }
+    if "filters" in raw:
+        llm_out["filters"] = raw["filters"]
+    elif "filterkey" in raw and "filtervalue" in raw:
+        llm_out["filters"] = [{"filterkey": raw["filterkey"], "filtervalue": raw["filtervalue"]}]
+
+    # Logging del segundo clasificador
+    token_usage = getattr(resp, "usage", {})
+    if hasattr(token_usage, "to_dict"):
+        token_usage = token_usage.to_dict()
+    print("🔍 token_usage final:", token_usage, type(token_usage))
+
+    log_ai_call(
+        call_type="Semantic Classifier",
+        model="gpt-4o",
+        provider="openai",
+        messages=user_question,
+        response=json.dumps(llm_out, ensure_ascii=False),
+        token_usage=token_usage,
+        conversation_id=conversation_id,
+        interaction_id=interaction_id,
+        prompt_file="Semantic Classifier",
+        temperature=0.0,
+        confidence_score=llm_out["confidence_score"]
+    )
+    
+
+    asyncio.create_task(log_ai_call_postgres(
+        call_type="Semantic Classifier",
+        model="gpt-4o",
+        provider="openai",
+        messages=user_question,
+        response=json.dumps(llm_out, ensure_ascii=False),
+        token_usage=token_usage,
+        conversation_id=conversation_id,
+        interaction_id=interaction_id,
+        prompt_file="Semantic Classifier",
+        temperature=0.0,
+        confidence_score=llm_out["confidence_score"]
+    ))
+
+    return llm_out
+
+def fetch_query_results(ticket_ids, conversation_id, interaction_id, filters=None):
+    extra_fields = set()
+    if filters:
+        for f in filters:
+            if "filterkey" in f:
+                extra_fields.add(f["filterkey"])
+
+    sql_query = (
+        f"SELECT iError=0, vError='', vJsonType='Query', IdTicket, Resumen"
+    )
+    if extra_fields:
+        sql_query += ", " + ", ".join(extra_fields)
+    sql_query += f" FROM Tickets WHERE IdTicket IN ({','.join(map(str, ticket_ids))})"
+
+    api_url = f"https://tickets.zell.mx/apilink/info?query={sql_query}"
+    headers = {"x-api-key": ZELL_API_KEY, "user": ZELL_USER, "password": ZELL_PASSWORD, "action": "7777"}
+    resp = httpx.get(api_url, headers=headers, timeout=20)
+    resp.raise_for_status()
+    data = resp.json()
+    log_zell_api_call(
+        action="Bulk Ticket Summaries (Faiss)",
+        api_action="7777",
+        endpoint=api_url,
+        request_data={"query": sql_query},
+        response_data=data,
+        status_code=resp.status_code,
+        headers={k: v for k, v in headers.items() if k.lower() != 'password'},
+        conversation_id=conversation_id,
+        interaction_id=interaction_id
+    )
+    return data if isinstance(data, list) else []
+
+@register_tool("Búsqueda Semántica")
+def execute_semantic_search(inputs, conversation_id, interaction_id=None):
+    print("✅ [semantic_tool] Entrando a execute_semantic_search")
+    user_question = (
+        inputs.get("semantic_keywords") or inputs.get("user_question") or inputs.get("search_query") or ""
+    ).strip()
+    print(f"🧠 [semantic_tool] Pregunta del usuario: '{user_question}'")
+    if not user_question:
+        return make_error_response("No se proporcionaron palabras clave para la búsqueda.")
+    interaction_id = interaction_id or get_interaction_id(conversation_id)
+    log_debug_event("Búsqueda Semántica", conversation_id, interaction_id, "Start", {"user_question": user_question})
+    if not faiss_loaded and not init_semantic_tool():
+        return make_error_response("No se pudo inicializar el índice semántico.")
+    vector = generate_openai_embedding(user_question, conversation_id, interaction_id)
+    if vector is None:
+        return make_error_response("Error al generar el vector de búsqueda.")
+    try:
+        print("📨 [semantic_tool] Llamando a second_classifier_via_llm")
+        print(f"📌 [semantic_tool] user_question detectado: '{user_question}'")
+        clf = second_classifier_via_llm(
+            user_question=user_question,
+            base_inputs={"search_query": user_question},
+            base_confidence=inputs.get("confidence_score", 1.0),
+            conversation_id=conversation_id,
+            interaction_id=interaction_id
+            )
+    except Exception as e:
+        logger.error(f"[SemanticTool] ⚠️ Clasificador falló: {e}")
+        clf = {"classification": "Búsqueda Semántica", "filters": [],
+               "confidence_score": inputs.get("confidence_score", 1.0),
+               "inputs": {"search_query": user_question}, "missing_inputs": [], "follow_up_prompt": ""}
+    top_k = 45 if clf.get("filters") else 10
+    results, _ = perform_faiss_search(vector, k=top_k)
+    ticket_ids = [r["ticket_id"] for r in results]
+    log_debug_event("Búsqueda Semántica", conversation_id, interaction_id, "FAISS IDs", {"ids": ticket_ids})
+    filters = clf.get("filters")
+    data = fetch_query_results(ticket_ids, conversation_id, interaction_id, filters=filters)
+    print(f"🔍 [semantic_tool] Filtros aplicados: {filters}")
+    final = []
+    response_lines = []
+    if filters:
+        for f in filters:
+            key = f.get("filterkey")
+            val = f.get("filtervalue")
+            if isinstance(val, dict) and "from" in val and "to" in val:
+                # Filtro por rango de fechas
+                from_date = val["from"]
+                to_date = val["to"]
+
+                def normalize(date_str):
+                    return datetime.strptime(date_str, "%m/%d/%Y")
+
+                try:
+                    data = [
+                        rec for rec in data
+                        if key in rec and rec.get(key)
+                        and normalize(from_date) <= normalize(rec.get(key)) <= normalize(to_date)
+                    ]
+                except Exception as e:
+                    print(f"❌ Error aplicando filtro de fechas: {e}")
+                    continue
+
+            elif isinstance(val, list):
+                data = [
+                    rec for rec in data
+                    if str(rec.get(key, "")).strip().lower() in [v.strip().lower() for v in val]
+                ]
+            else:
+                data = [
+                    rec for rec in data
+                    if str(rec.get(key, "")).strip().lower() == val.strip().lower()
+                ]
+        else:
+            print("🔍 [semantic_tool] No se aplicó filtro.")
+
+    for rec in data:
+        idticket = rec.get("IdTicket")
+        resumen = rec.get("Resumen", "(sin resumen)")
+        if filters:
+            extras = " | ".join(f"{f['filterkey']}: {rec.get(f['filterkey'], '(sin valor)')}" for f in filters)
+            response_lines.append(f"*IdTicket: {idticket} | {extras} | Resumen: {resumen}")
+        else:
+            response_lines.append(f"*IdTicket: {idticket} | Resumen: {resumen}")
+        final.append({
+            "IdTicket": idticket,
+            "Resumen": resumen
+        })
+    if response_lines:
+        response_text = "🧠 **Resultados semánticos:**\n\n" + "\n\n---\n\n".join(response_lines)
+    else:
+        response_text = "No encontré tickets que coincidan con esos criterios."
+    try:
+        add_to_context(
+            conversation_id=conversation_id,
+            active_tool=clf.get("classification"),
+            user_input=user_question,
+            system_output=response_text.strip(),
+            data_used={"results": results}
+        )
+        log_ai_call(
+            call_type="Semantic Search",
+            model="text-embedding-ada-002",
+            provider="openai",
+            messages=user_question,
+            response=response_text,
+            token_usage="token_usage",
+            conversation_id=conversation_id,
+            interaction_id=interaction_id,
+            prompt_file="Semantic Search",
+            temperature=0.3
+        )
+
+        asyncio.create_task(log_ai_call_postgres(
+            call_type="Semantic Search",
+            model="text-embedding-ada-002",
+            provider="openai",
+            messages=user_question,
+            response=response_text,
+            conversation_id=conversation_id,
+            interaction_id=interaction_id,
+            prompt_file="Semantic Search",
+            temperature=0.3
+        ))
+
+        classification = "Búsqueda Semántica"
+        return ToolResponse(
+            classification=classification,
+            response=response_text.strip(),
+            results=final
+        ).model_dump()
+    except Exception as e:
+        logger.error(f"❌ [semantic_tool] Error al construir respuesta final: {e}")
+        return make_error_response("Error en ejecución de herramienta.")
+
+
+
+================================================================================
+FILE: Tools/ticket_tool.py
+================================================================================
+
+# 👉 wrapper que decide a qué proveedor pegarle
+from Tools.continuation_tool import TicketRequest
+from utils.llm_provider import chat_completion
+from utils.llm_config import get_llm_config
+import os
+import json
+import logging
+import httpx
+from pydantic import BaseModel
+
+from utils.logs import (
+    log_interaction,
+    log_ai_call,
+    log_zell_api_call,
+    log_ai_call_postgres
+)
+from utils.debug_logger import log_debug_event
+from utils.contextManager.context_handler import (
+    add_to_context,
+    get_context,
+    get_interaction_id
+)
+from utils.tool_response import ToolResponse, make_error_response
+from utils.tool_registry import register_tool
+from utils.prompt_loader import load_latest_prompt
+
+
+logger = logging.getLogger(__name__)
+
+# ──────────────────────────────────────────────────────────────
+# PROMPT BASE
+# ──────────────────────────────────────────────────────────────
+TICKET_AI_PROMPT, TICKET_PROMPT_FILE = load_latest_prompt(
+    "Ticket",          # carpeta Prompts/
+    "ticketprompt",    # prefijo
+    with_filename=True
+)
+if not TICKET_AI_PROMPT:
+    logger.warning("⚠️ ticketprompt no fue cargado!")
+
+# ──────────────────────────────────────────────────────────────
+# LÓGICA PARA EXTRAER EL TICKET DEL API DE ZELL
+# ──────────────────────────────────────────────────────────────
+def get_ticket_data(ticket_number, conversation_id):
+    api_url = f"https://tickets.zell.mx/apilink/info?source=1&sourceid={ticket_number}"
+    api_headers = {
+        "x-api-key": os.getenv("ZELL_API_KEY", ""),
+        "user":     os.getenv("ZELL_USER", ""),
+        "password": os.getenv("ZELL_PASSWORD", ""),
+        "action":   "5001"
+    }
+    interaction_id = get_interaction_id(conversation_id)
+    sanitized_headers = {k: v for k, v in api_headers.items() if k.lower() != "password"}
+
+    try:
+        with httpx.Client(timeout=30) as client:
+            response = client.get(api_url, headers=api_headers)
+
+        raw_response_text = response.text
+        response.raise_for_status()
+
+        try:
+            data = response.json()
+        except json.JSONDecodeError:
+            return {"error": "La API respondió con un formato no válido", "raw_response": raw_response_text}
+
+        if isinstance(data, dict) and data.get("code") == 145125:
+            return {"error": "La API no encontró el ticket solicitado.", "raw": data}
+
+        log_zell_api_call(
+            action="Fetch Ticket Data",
+            api_action="5001",
+            endpoint=api_url,
+            request_data={"ticket_number": ticket_number},
+            response_data=data,
+            status_code=response.status_code,
+            headers=sanitized_headers,
+            conversation_id=conversation_id,
+            interaction_id=interaction_id
+        )
+
+        # Formato esperado → asegúrate de regresar dict con ticket_id
+        if isinstance(data, dict) and "IdTicket" in data:
+            data["ticket_id"] = data["IdTicket"]
+            return data
+        if isinstance(data, list) and data and "IdTicket" in data[0]:
+            d = data[0]
+            d["ticket_id"] = d["IdTicket"]
+            return d
+
+        return {"error": "Formato de respuesta de API inesperado", "data": data}
+
+    except (httpx.TimeoutException, httpx.HTTPStatusError) as e:
+        return {"error": f"Error al obtener datos del ticket: {str(e)}"}
+
+# ──────────────────────────────────────────────────────────────
+# LLAMADA AL LLM (proveedor configurable)
+# ──────────────────────────────────────────────────────────────
+async def query_ticket_llm(ticket_data, user_question, conversation_id, userName):
+    """
+    Construye el prompt y dispara la llamada usando chat_completion(),
+    que ya decide si usa OpenAI, DeepSeek, Anthropic, etc.
+    """
+    ticket_data_str = json.dumps(ticket_data, ensure_ascii=False, indent=2)
+    ticket_prompt   = TICKET_AI_PROMPT.replace("{ticket_data}", ticket_data_str)\
+                                      .replace("{user_question}", user_question)
+
+    # agrega historial corto si la conversación ya estaba en ticket tool
+    conv_ctx = get_context(conversation_id)
+    if conv_ctx.get("active_tool") == "Consulta de Tickets":
+        history = conv_ctx.get("history", [])[-3:]
+        extra   = "\n".join(
+            f"Usuario: {h['usersinput']}\nBot: {h['systemoutput']}"
+            for h in history if isinstance(h, dict)
+        )
+        if extra:
+            ticket_prompt += f"\nHistorial relevante:\n{extra}"
+
+    messages = [
+        {"role": "system", "content": "Eres un asistente de soporte que responde sobre tickets."},
+        {"role": "user",   "content": ticket_prompt}
+    ]
+
+    # 🚀 llamada unificada
+    resp = await chat_completion(messages, temperature=0.3, max_tokens=1000)
+    raw  = resp["choices"][0]["message"]["content"].strip()
+
+    # intenta parsear JSON si el prompt lo pide
+    try:
+        if raw.startswith("```json"):
+            raw = raw.removeprefix("```json").removesuffix("```").strip()
+        parsed = json.loads(raw)
+        ai_response = parsed.get("respuesta", raw)
+    except Exception:
+        ai_response = raw
+
+    from utils.llm_config import get_llm_config
+    cfg           = get_llm_config("TICKET")   # lee modelo/proveedor efectivos
+    real_model    = cfg["model"]
+    real_provider = cfg["provider"].value      # "openai" o "deepseek"
+    token_usage   = resp.get("usage", {})  # dict con los tokens
+
+    # log limpio
+    safe_msgs = [
+        {"role": "system", "content": f"[PROMPT:{TICKET_PROMPT_FILE}]"},
+        {"role": "user",   "content": user_question}
+    ]
+    interaction_id = get_interaction_id(conversation_id)
+
+    log_ai_call(
+        call_type="Ticket Query",
+        model=real_model,
+        provider=real_provider,
+        messages=safe_msgs,
+        response=ai_response,
+        token_usage=token_usage,
+        conversation_id=conversation_id,
+        interaction_id=interaction_id,
+        prompt_file=TICKET_PROMPT_FILE,
+        temperature=0.3
+    )
+
+    await log_ai_call_postgres(
+        call_type="Ticket Query",
+        model=real_model,
+        provider=real_provider,
+        messages=json.dumps(safe_msgs, ensure_ascii=False),
+        response=json.dumps(ai_response, ensure_ascii=False),
+        token_usage=token_usage,
+        conversation_id=conversation_id,
+        interaction_id=interaction_id,
+        prompt_file=TICKET_PROMPT_FILE,
+        temperature=0.3
+    )
+
+    return ai_response
+
+# ──────────────────────────────────────────────────────────────
+# ENDPOINT / TOOL
+# ──────────────────────────────────────────────────────────────
+@register_tool("Consulta de Tickets")
+async def execute_ticket_query(inputs, conversation_id, interaction_id, userName, step_id=1):
+    ticket_number = str(inputs.get("ticket_number", "")).strip()
+    user_question = inputs.get("user_question", "").strip()
+
+    if not ticket_number:
+        return make_error_response("Falta el número del ticket.")
+
+    if interaction_id is None:
+        interaction_id = get_interaction_id(conversation_id)
+
+    # 1. Obtén datos del ticket
+    ticket_data = get_ticket_data(ticket_number, conversation_id)
+    if "error" in ticket_data:
+        return make_error_response(ticket_data["error"])
+
+    # 2. Pregunta al LLM
+    ai_response = await query_ticket_llm(ticket_data, user_question, conversation_id, userName)
+    if isinstance(ai_response, dict) and ai_response.get("error"):
+        return make_error_response(ai_response["error"])
+
+    # 3. Guarda contexto + logs
+    add_to_context(
+        conversation_id=conversation_id,
+        active_tool="Consulta de Tickets",
+        user_input=user_question,
+        system_output=ai_response,
+        data_used={"ticket_data": ticket_data}
+    )
+
+    log_interaction(
+        userName=userName,
+        conversation_id=conversation_id,
+        interaction_id=interaction_id,
+        step_id=step_id,
+        user_input=user_question,
+        system_output=ai_response,
+        classification="Consulta de Tickets",
+        extra_info="Ticket Tool"
+    )
+
+    if isinstance(ai_response, dict):
+        # 🎯 Formatear salida como texto plano para el widget
+        lines = []
+        if "IdTicket" in ai_response:
+            lines.append(f"* IdTicket: {ai_response['IdTicket']}")
+        if "Cliente" in ai_response:
+            lines.append(f"| Cliente: {ai_response['Cliente']}")
+        if "Titulo" in ai_response:
+            lines.append(f"| Titulo: {ai_response['Titulo']}")
+        if "FechaCreado" in ai_response:
+            lines.append(f"| FechaCreado: {ai_response['Creado']}")
+        if "DetectadoPor" in ai_response:
+            lines.append(f"| DetectadoPor: {ai_response['DetectadoPor']}")
+        if "Estatus" in ai_response:
+            lines.append(f"| Estatus: {ai_response['Estatus']}")
+        if "Resumen" in ai_response:
+            lines.append(f"\n{ai_response['Resumen']}")
+
+        ai_response = "\n".join(lines)
+
+
+    return ToolResponse(
+        classification="Consulta de Tickets",
+        response=ai_response
+    ).model_dump()
+
+
+
+================================================================================
+FILE: Tools/busquedacombinada_tool.py
+================================================================================
+
+from utils.llm_config import get_llm_config   # (si aún no está importado)
+import json
+import logging
+import os
+import openai
+import traceback
+import httpx
+import requests
+
+from utils.contextManager.context_handler import get_interaction_id
+from utils.logs import log_zell_api_call
+from utils.logs import log_ai_call
+from utils.prompt_loader import load_latest_prompt
+from utils.tool_response import make_error_response
+from Tools.semantic_tool import generate_openai_embedding, perform_faiss_search, init_semantic_tool
+
+logging.basicConfig(level=logging.INFO)
+
+def fetch_ticket_data(ticket_number):
+    sql_query = sql_query = f"""
+    SELECT TOP 1 
+        iError = 0, 
+        vError = '', 
+        vJsonType = 'Query',
+        IdTicket, 
+        Cliente, 
+        Titulo, 
+        Descripcion 
+    FROM dbo.Tickets 
+    WHERE IdTicket = {ticket_number}
+    """
+    api_url = f"https://tickets.zell.mx/apilink/info?query={sql_query}"
+    headers = {
+        "x-api-key": os.getenv("ZELL_API_KEY"),
+        "user": os.getenv("ZELL_USER"),
+        "password": os.getenv("ZELL_PASSWORD"),
+        "action": "7777"
+    }
+    try:
+        response = requests.get(api_url, headers=headers)
+        response.raise_for_status()
+        data = response.json()
+
+        print("🔍 DEBUG - Respuesta completa del API:")
+        print(json.dumps(data, indent=2, ensure_ascii=False))
+
+        if isinstance(data, list) and len(data) > 0:
+            return data[0]
+        elif isinstance(data, dict) and "IdTicket" in data:
+            return data
+        return {"error": "Ticket no encontrado o respuesta inesperada"}
+    except Exception as e:
+        logging.error(f"❌ Zell API error: {e}")
+        return {"error": str(e)}
+
+
+def get_ticket_comments(ticket_number, conversation_id):
+    api_url = f"https://tickets.zell.mx/apilink/info?source=1&sourceid={ticket_number}"
+    api_headers = {
+        "x-api-key": os.getenv("ZELL_API_KEY", ""),
+        "user": os.getenv("ZELL_USER", ""),
+        "password": os.getenv("ZELL_PASSWORD", ""),
+        "action": "5002"
+    }
+    interaction_id = get_interaction_id(conversation_id)
+    sanitized_headers = {k: v for k, v in api_headers.items() if k.lower() not in ["password"]}
+
+    try:
+        logging.info(f"🔍 Fetching comments for ticket {ticket_number} from Zell API...")
+
+        with httpx.Client(timeout=30) as client:
+            response = client.get(api_url, headers=api_headers)
+
+        raw_response_text = response.text
+        response.raise_for_status()
+
+        try:
+            comments_data = response.json()
+        except json.JSONDecodeError as e:
+            error_msg = f"❌ Error decoding JSON (comments): {str(e)}"
+            logging.error(f"{error_msg} | Raw response: {raw_response_text}")
+            return {"error": "La API respondió con un formato no válido", "raw_response": raw_response_text}
+
+        if isinstance(comments_data, dict) and comments_data.get("code") == 145125:
+            return {"error": "La API no encontró comentarios para el ticket solicitado.", "raw": comments_data}
+
+        log_zell_api_call(
+            action="Fetch Ticket Comments",
+            api_action="5002",
+            endpoint=api_url,
+            request_data={"ticket_number": ticket_number},
+            response_data=comments_data,
+            status_code=response.status_code,
+            headers=sanitized_headers,
+            conversation_id=conversation_id,
+            interaction_id=interaction_id
+        )
+
+        return comments_data
+
+    except httpx.TimeoutException:
+        error_msg = f"⏳ Timeout: No se pudo obtener comentarios del ticket {ticket_number} en el tiempo esperado."
+    except httpx.HTTPStatusError as e:
+        error_msg = f"❌ HTTP Error al obtener comentarios del ticket: {str(e)}"
+    except Exception as e:
+        error_msg = f"Error inesperado: {str(e)}"
+
+    logging.error(error_msg)
+    return {"error": error_msg}
+
+def search_tickets_by_keywords(keywords, max_results=3):
+    if not keywords:
+        return []
+
+    all_results = []
+    seen_ids = set()
+
+    for kw in keywords:
+        words = kw.split()
+        if not words:
+            continue  # si está vacío, lo saltamos
+
+        sanitized_words = [w.replace("'", "''") for w in words]
+        like_titulo = " AND ".join([f"Titulo COLLATE Latin1_General_CI_AI LIKE '%{w}%'" for w in sanitized_words])
+        like_desc = " AND ".join([f"Descripcion COLLATE Latin1_General_CI_AI LIKE '%{w}%'" for w in sanitized_words])
+        like_clause = f"(({like_titulo}) OR ({like_desc}))"
+
+        print(f"🔍 Ejecutando búsqueda LIKE para keyword '{kw}':\n{like_clause}")
+
+        sql_query = f"""
+            SELECT TOP {max_results}
+                iError = 0,
+                vError = '',
+                vJsonType = 'Query',
+                IdTicket,
+                Cliente,
+                Titulo,
+                Descripcion
+            FROM Tickets
+            WHERE {like_clause}
+            ORDER BY CONVERT(datetime, FechaCreado, 101) DESC
+        """
+
+        api_url = f"https://tickets.zell.mx/apilink/info?query={sql_query}"
+        headers = {
+            "x-api-key": os.getenv("ZELL_API_KEY"),
+            "user": os.getenv("ZELL_USER"),
+            "password": os.getenv("ZELL_PASSWORD"),
+            "action": "7777"
+        }
+
+        try:
+            response = requests.get(api_url, headers=headers, timeout=10)
+            response.raise_for_status()
+            results = response.json()
+
+            for r in results:
+                if not isinstance(r, dict):
+                    logging.warning(f"[Keyword Search] salto resultado no dict: {r!r}")
+                    continue
+                ticket_id = r.get("IdTicket")
+                if ticket_id and ticket_id not in seen_ids:
+                    seen_ids.add(ticket_id)
+                    all_results.append(r)
+
+        except Exception as e:
+            logging.error(f"❌ Error en búsqueda LIKE con keyword '{kw}': {e}")
+            continue
+
+    return all_results
+
+
+def ejecutar_busqueda_combinada(ticket_number: str, conversation_id: str, interaction_id: int = None):
+    print("🚀 Ejecutando búsqueda combinada para ticket:", ticket_number)  # <-- AQUÍ
+    if interaction_id is None:
+        interaction_id = get_interaction_id(conversation_id)
+
+    try:
+        ticket_info = fetch_ticket_data(ticket_number)
+        print("🔍 ticket_info:", ticket_info)
+        if "error" in ticket_info:
+            print("❌ Error en ticket_info")
+            return make_error_response(ticket_info["error"])
+
+        ticket_comments = get_ticket_comments(ticket_number, conversation_id)
+        print("📝 ticket_comments:", ticket_comments)
+        if isinstance(ticket_comments, dict) and "error" in ticket_comments:
+            print("❌ Error en ticket_comments")
+            return make_error_response(ticket_comments["error"])
+
+        print("📂 Intentando cargar prompt desde carpeta CompararTicket con patrón compararticketprompt")
+        prompt_full, prompt_file = load_latest_prompt("BusquedaCombinada", "busquedacombinadaprompt", with_filename=True)
+
+
+        payload = {
+            "ticket_data": ticket_info,
+            "ticket_comments": ticket_comments
+        }
+
+        model_input = json.dumps(payload, ensure_ascii=False)
+        api_key = os.getenv("OPENAI_API_KEY_CompararTicket")
+        if not api_key:
+            return make_error_response("Falta clave API para extracción de claves.")
+
+
+        client = openai.OpenAI(api_key=api_key)
+        messages = [
+            {"role": "system", "content": f"[PROMPT:{prompt_file}]"},
+            {"role": "system", "content": prompt_full},
+            {"role": "user", "content": model_input}
+        ]
+
+        resp = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=messages,
+            response_format={"type": "json_object"},
+            timeout=30,
+            temperature=0
+        )
+        content = resp.choices[0].message.content
+        parsed = json.loads(content) if isinstance(content, str) else content
+        key_sentences = parsed.get("key_sentences", [])
+        keywords = parsed.get("keywords", [])
+        
+        cfg = get_llm_config("COMPARAR_TICKET")       # usa el prefijo que quieras
+
+        log_ai_call(
+            call_type      = "Key Extraction",
+            model          = cfg["model"],            # "gpt-4o-mini" o el tuyo
+            provider       = cfg["provider"].value,   # "openai" o "deepseek"
+            messages       = messages,
+            response       = key_sentences,
+            token_usage    = getattr(resp, "usage", {}),   # si quieres registrar tokens
+            conversation_id= conversation_id,
+            interaction_id = interaction_id,
+            prompt_file    = prompt_file,
+            temperature    = 0
+        )
+
+        init_semantic_tool()
+        all_similar_ids = set()
+        for sentence in key_sentences[:2]:
+            vector = generate_openai_embedding(sentence, conversation_id, interaction_id)
+            results, _ = perform_faiss_search(vector, k=3)
+            for r in results:
+                all_similar_ids.add(r["ticket_id"])
+
+        similar_tickets_faiss = []
+        for tid in all_similar_ids:
+            if str(tid) == str(ticket_number):
+                continue
+            data = fetch_ticket_data(tid)
+            comments = get_ticket_comments(tid, conversation_id)
+            similar_tickets_faiss.append({"ticket_data": data, "ticket_comments": comments})
+
+        query_results_raw = search_tickets_by_keywords(keywords, max_results=3)
+        similar_tickets_like = []
+        for result in query_results_raw:
+            tid = result.get("IdTicket")
+            if str(tid) == str(ticket_number):
+                continue
+            data = fetch_ticket_data(tid)
+            comments = get_ticket_comments(tid, conversation_id)
+            similar_tickets_like.append({"ticket_data": data, "ticket_comments": comments})
+            
+        print("✅ Terminó búsqueda combinada, devolviendo resultados")
+        return {
+            "ticket_data": ticket_info,
+            "ticket_comments": ticket_comments,
+            "key_sentences": key_sentences,
+            "keywords": keywords,
+            "by_faiss": similar_tickets_faiss,
+            "by_query": similar_tickets_like
+        }
+
+    except Exception:
+        logging.error("❌ Error inesperado durante ejecución de búsqueda combinada:")
+        traceback.print_exc()
+        raise
+
+
+
+
+================================================================================
+FILE: Tools/compararticket_tool.py
+================================================================================
+
+from utils.llm_provider import chat_completion
+from utils.llm_config   import get_llm_config
+import json
+import logging
+import os
+from fastapi import APIRouter
+
+from utils.logs import log_ai_call, log_ai_call_postgres
+from utils.tool_registry import register_tool
+from utils.contextManager.context_handler import get_interaction_id, add_to_context
+from utils.tool_response import ToolResponse, make_error_response
+from Tools.busquedacombinada_tool import ejecutar_busqueda_combinada
+from utils.prompt_loader import load_latest_prompt
+
+# — carga del prompt —
+COMPARACION_PROMPT_FULL, COMPARACION_PROMPT_FILE = load_latest_prompt(
+    "CompararTicket", "comparacionfinalprompt", with_filename=True
+)
+
+
+router = APIRouter()
+
+@router.post("/comparar_ticket")
+@register_tool("Comparar ticket")
+async def comparar_ticket(*args, **kwargs) -> dict:
+    """
+    puede recibir:
+      - args[0] = inputs (dict)
+      - args[1] = conversation_id (str)
+    o bien venir en kwargs:
+      - inputs
+      - conversation_id
+    """
+    # 1) Extraer inputs y conversation_id
+    if len(args) >= 2:
+        inputs = args[0]
+        conversation_id = args[1]
+    else:
+        inputs = kwargs.get("inputs", {})
+        conversation_id = kwargs.get("conversation_id")
+
+    # validamos
+    if not isinstance(inputs, dict):
+        return make_error_response("Inputs inválidos.").model_dump()
+    if not conversation_id:
+        return make_error_response("Falta conversation_id.").model_dump()
+
+    interaction_id = get_interaction_id(conversation_id)
+
+    try:
+        # 2) Validar ticket_number y pregunta
+        ticket_number = inputs.get("ticket_number")
+        user_question = inputs.get("user_question")
+        if not ticket_number:
+            return make_error_response("Falta el número de ticket.").model_dump()
+        if not user_question:
+            return make_error_response("Falta la pregunta del usuario.").model_dump()
+
+        # 3) Búsqueda combinada
+        raw_combined = ejecutar_busqueda_combinada(ticket_number, conversation_id, interaction_id)
+        if hasattr(raw_combined, "model_dump"):
+            combined_results = raw_combined.model_dump()
+        else:
+            combined_results = raw_combined
+        if not isinstance(combined_results, dict) or "ticket_data" not in combined_results:
+            return make_error_response("Búsqueda combinada no devolvió datos válidos.").model_dump()
+
+        # 4) Prepara payload y mensajes
+        prompt_final = {
+            "ticket_principal": combined_results["ticket_data"],
+            "key_sentences":    combined_results.get("key_sentences", []),
+            "keywords":         combined_results.get("keywords", []),
+            "similar_by_faiss": combined_results.get("by_faiss", []),
+            "similar_by_query": combined_results.get("by_query", [])
+        }
+        messages = [
+            {"role": "system", "content": COMPARACION_PROMPT_FULL},
+            {"role": "user",   "content": json.dumps(prompt_final, ensure_ascii=False)}
+        ]
+
+        messages[0]["content"] = (
+            "IMPORTANTE: devuelve *solo* JSON* válido sin nada más.\n\n"
+            + messages[0]["content"]
+        )
+
+        # … dentro de comparar_ticket(), antes de get_llm_config …
+        print("[ENV CHECK]     LLM_PROVIDER       =", os.getenv("LLM_PROVIDER"))
+        print("[ENV CHECK]     COMPARAR_TICKET_LLM_PROVIDER =", os.getenv("COMPARAR_TICKET_LLM_PROVIDER"))
+        print("[ENV CHECK]     OPENAI_MODEL       =", os.getenv("OPENAI_MODEL"))
+        print("[ENV CHECK]     COMPARAR_TICKET_OPENAI_MODEL =", os.getenv("COMPARAR_TICKET_OPENAI_MODEL"))
+
+        # 5) Carga cfg y debug print
+        cfg = get_llm_config("COMPARAR_TICKET")
+        provider = cfg["provider"].value
+        model = cfg["model"]
+        print(f"[DEBUG] get_llm_config COMPARAR_TICKET → provider={provider}, model={model}")
+
+        # 6) Llamada al LLM según proveedor
+        if provider == "openai":
+            resp = await chat_completion(
+                messages,
+                tool="COMPARAR_TICKET",
+                model=model,
+                response_format={"type": "json_object"},
+                temperature=0.5,
+                timeout=45
+            )
+        else:
+            resp = await chat_completion(
+                messages,
+                tool="COMPARAR_TICKET",
+                model=model,
+                temperature=0.5,
+                timeout=45
+            )
+
+
+        # 7) Procesa respuesta del LLM
+        raw = resp["choices"][0]["message"]["content"].strip()
+        logging.info(f"RAW LLM OUTPUT: {raw!r}")
+
+        # 💡 Imprimir directamente la respuesta cruda del modelo
+        print("\n[DEBUG - RAW AI RESPONSE] =====================")
+        print(raw)
+        print("==============================================\n")
+        
+
+        # Convertir a texto plano formateado directamente
+        response_text = json.loads(raw).get("analisis_final", "").strip()
+
+
+        # 8) Log seguro
+        safe_messages = [
+            {"role": "system", "content": f"[PROMPT:{COMPARACION_PROMPT_FILE}]"},
+            {"role": "user",   "content": user_question}
+        ]
+        token_usage = resp.get("usage", {})
+        log_ai_call(
+            call_type="Comparar Ticket",
+            model=model,
+            provider=provider,
+            messages=safe_messages,
+            response=response_text,
+            token_usage=token_usage,
+            conversation_id=conversation_id,
+            interaction_id=interaction_id,
+            prompt_file=COMPARACION_PROMPT_FILE,
+            temperature=0.5
+        )
+
+        await log_ai_call_postgres(
+            call_type="Comparar Ticket",
+            model=model,
+            provider=provider,
+            messages=safe_messages,
+            response=response_text,
+            token_usage=token_usage,
+            conversation_id=conversation_id,
+            interaction_id=interaction_id,
+            prompt_file=COMPARACION_PROMPT_FILE,
+            temperature=0.5
+        )
+                 
+        add_to_context(
+            conversation_id=conversation_id,
+            active_tool="Comparar Ticket",
+            user_input=user_question,
+            system_output=response_text,
+            data_used={"ticket_data": ticket_number}
+        )
+
+        # 8) Retorno exitoso
+        return ToolResponse(
+            classification="Comparar ticket",
+            response=response_text.strip(),
+            error="",
+            results=[]
+        ).model_dump()
+
+
+    except Exception as e:
+        logging.exception("Error en Comparar ticket")
+        error_msg = f"Error en Comparar ticket: {type(e).__name__}: {e}"
+        return make_error_response(error_msg).model_dump()
+
+
+
+
+   
+
+
+================================================================================
+FILE: Prompts/Clasificator/clasificadorprompt_v2.txt (NOT FOUND)
+================================================================================
+
+
+================================================================================
+FILE: Prompts/Ticket/ticketprompt_v1.txt
+================================================================================
+
+Rol: Eres un asistente especializado en analizar y responder preguntas sobre tickets de soporte.
+
+IMPORTANTE: Debes responder siempre en formato JSON con la siguiente estructura:
+```json
+{
+  "respuesta": "Tu respuesta detallada aquí"
+}
+```
+Tarea: Responder la pregunta del usuario **únicamente en función de los datos proporcionados en el JSON**. Si la pregunta no se puede responder con la información dada, indica que el dato no está disponible.
+Recibirás datos estructurados de un ticket en formato JSON.
+
+Esquema de base de datos (Tabla & campos)
+A continuación, se detallan todos los campos que tomarás en cuenta para generar el query.
+
+- **IdTicket** → ID único de ticket de atención.
+- **Cliente** → Cliente o empresa asociada al ticket.
+- **Titulo** → Título del ticket.
+- **Descripcion** → Descripción o comentario detallado del ticket.
+- **FechaCreado** → Fecha de creación, apertura, registro, levantamiento del ticket en formato MM/dd/yyyy.
+- **HoraCreado** → Hora de creación, apertura, registro, levantamiento del ticket en formato 'h:mmtt'.
+- **DetectadoPor → Este campo indica quien creó, levantó, aperturó, registró el ticket o incidencia. 
+- **AsignadoA** → Persona a quien está asignado el ticket.
+- **Contacto** → Persona con la cual se esta teniendo comunicacion especificamente de la empresa cliente. 
+- **Categoria** → Categoría o tipo de incidencia del ticket (Ver catálogo más abajo).
+- **Prioridad** → Hace referencia a la urgencia con la cual se debe tratar la incidenciao ticket. 
+- **Modulo** → Módulo o área de Zell relacionado con el ticket (Ver catálogo más abajo).
+- **Estatus** → Estatus actual del ticket (Ver catálogo más abajo)
+- **FechaEstatus** → Fecha en la cual el ticket cambió al estatus actual. Esta en formato MM/dd/yyyy. 
+- **HoraEstatus** → Hora en la cual el ticket cambió al estatus actual. Esta en formato 'h:mmtt'. 
+- **Unidades** → Los proyectos, implementaciones, desarrollos se cotizan en unidades dentro de Zell. 
+- **Costo** → Cantidad monetaria a la cual se cotizó el ticket.
+- **Calificacón** → Califiación asignada al equipo de atencion con respecto a como se ha manejado este ticket en específico. 
+- **FechaEntrega** → Esta en formato MM/dd/yyyy. 
+- **Resumen** → Breve resumen de la conversacion que ha tenido con cliente por coreo electronico
+- **Etiquetas** → También mencionado como metadata, son palabras clave las cuales describen el ticket y facilitan la busqueda de tickets específicos dentro del sistema. 
+- **UltimoComentario** → El ultimo comentario que registró el especialista en atención a clientes sobre la coversación. 
+- **FechaUltimoComentario** → Esta en formato MM/dd/yyyy.
+- **HoraUltimoComentario** → Esta en formato 'h:mmtt'.
+- **DiasDelTicket** → Cantidad de días que lleva vivo el ticket desde su creación.
+- **DiasEnEstatus** → Cantidad de días que lleva el ticket en el estatus actual.
+- **DiasParaCambiar** → Cantidad de días que le restan al ticket para estar en ese estatus antes de que hayan afectaciones o consecuencias. 
+
+🔹 Catálogos
+📌 Estatus (Estatus o Estado de tickets)
+Los tickets pueden estar en alguno de los siguientes estados o estatus:
+Código	Estado
+1	Abierto
+2	Analisis del Ticket
+3	Por Cotizar
+4	Cotizado
+5	Estima Fecha Desarrollo
+6	Desarrollo
+7	Calidad
+8	Validación Cliente
+9	Por Facturar
+10	Facturado
+11	Liberar Producción
+13	Cerrado
+14	Cancelado
+15	Rechazado Zell
+16	Espera Informacion
+17	Notificar Cliente
+18	Pagado
+19	Configura - Atención
+20	Investigación
+21	Estima Fecha Producción
+22	Suspendido
+23	Facturación Parcial
+24	Revisión
+
+*Normalmente te preguntarán el estado por su "Estado" NO por su "Código".
+
+📌 Tickets Activos vs. Tickets Abiertos
+"Tickets activos" o "Tickets abiertos" significa cualquier ticket que NO esté en un estado finalizado.
+Estados finalizados incluyen:
+Cerrado, Facturado, Cancelado, Rechazado Zell, Pagado, Suspendido.
+"Tickets en estatus abierto" en SINGULAR hace referencia al "estatus Abierto" o "1" del catálogo de arriba.
+
+📌 Modulo (Módulos del Sistema)
+Código	Modulo
+1	Solicitudes
+10	Sistema
+11	Procesos
+12	Manuales
+13	Otros
+14	Domiciliacion
+15	Grupales
+16	Webservice
+17	Interfaces
+18	Prospectos
+19	Facturacion
+2	Cartera
+3	Cobranza
+4	Contabilidad
+5	Reportes
+6	Monitores
+7	PLD
+8	Tickets
+9	Catalogos
+*Normalmente se hace referencia a los módulos de la siguiente manera: ¿En cuáles tickets se implementó/habilitó el módulo PLD?
+
+📌 Categoria (Categoría de Ticket)
+*Toma en cuenta Categoria NO Código
+Código	Categoria
+1	Falla Sistema
+2	Soporte y Dudas
+3	Req Desarrollo (Cuando se hable de alguna modificación que se hizo). Cuando se hable de tickets que involcuran desarrollos o de desarrollos (hace referencia a tickets que tienen esta categoría)
+4	Error Configuracion
+5	Otros
+6	Req Configuracion
+
+📌 Prioridad (Tambíen mencionado como "Tipo de falla")
+Otros
+Media
+Mayor
+
+Catalogo de Clientes/Empresas
+*Incluye el campo "Cliente" en los queries NO el "Nombre". 
+Cliente	Nombre
+ABF	Apoyo de Beneficio Familiar
+ALEA	Aliados Estratégicos del Atlántico
+ATM	Atman
+ATN	Acércate a Tu Nómina
+AYU	Ayudate
+BXL	Broxel
+CFA	CreditoFacil
+CFM	Crédito Familiar
+CRF	Credifiel
+CRQ	CrediQuincena
+CRZ	Credenz o Fimubac
+DFR	Dinero Fácil y Rápido
+DXN	Dan Crédito Express
+DXT	Dinerito Xtra
+EXI	Exitus
+FCA	FCapital
+FCB	F.CUBE
+FLS	Flising
+FPT	Factor Para Ti
+GFI	GFIApoyo
+GOC	GoCredit
+IC	Finnoval
+INA	InnodiAyudate
+INM	InmediPrest
+KON	KON DINERO
+MDI	Mi Dinerito
+MTN	Multiplica
+PD	Primero Dinero
+PGT	PagaTodo
+PRC	Percapita
+SAM	SAM
+TFIN	TotalFIN
+TPG	Divino Dinero
+UCX	Unicredix
+YTP	Yo Te Presto
+ZELL	Corporativo Zell
+
+Catalogo de Colaboradores Zell 
+Tomar en cuenta SIEMPRE cuando se haga referencia a personas. SIEMPRE contestar solamente con el primer nombre de las personas. Aplica el mismo número de iPersonId para DetectadoPor, iPersIdCaptured, AsignadoA. En los queries incluye el primer nombre en mayúsculas. 
+Código, Nombre, Área
+1, EDGAR LANGARICA, Dirección
+2, ALEJANDRO MORAGREGA CAMPUZANO, Desarrollo y/o Dirección
+6, JAVIER MORA, Atención a clientes
+119, CRISTIAN EUNICE SALAZAR CORTES, Desarrollo
+138, ISIS GARCIA, Calidad
+177, LIZA ANDREA BEJAR CHAVEZ, Procesos
+193, ALFREDO GRAJEDA, Atención a clientes
+355, CHELSEA EVELYN CONTRERAS DELGADO, Atención a clientes
+363, HUGO LANGARICA, No especificado
+370, CAROLINA GASCA ESPINOSA, Atención a clientes
+371, JOHANA BLEIZEFFER VALDEZ, Atención a clientes
+
+🔹 Otras reglas
+*"Tickets cerrados" (plural) interpreta tickets en estatus finales Estatus (Cerrado, Facturado, Cancelado, Rechazado Zell, Pagado, Suspendido). Si te mencionan "Tickets en estatus Cerrado" entonces si interpreta segun Estatus=Cerrado. 
+*Los proyectos, implementaciones, requerimientos, aplicaciones, etc. se cotizán en "unidades".
+*Contesta siempre el primer nombre de las personas en AsignadoA o DectectadoPor según el contexto.
+
+Usa la **etiqueta** correspondiente en lugar del número.
+
+Datos del ticket:
+{ticket_data}
+
+Pregunta del usuario:
+{user_question}
+
+Formato de Respuesta (Contestar EXACTAMENTE así)
+Ejemplo 1.
+*Si te piden el ticket completo
+Pregunta usuario: {Traeme el ticket 35617}
+Aquí está toda la información del ticket 35617:\n\n    
+
+* IdTicket: 35617 | Cliente: CreditoFacil | Titulo: Cambios en Estados de Cuenta | Descripcion: Se solicita realizar los cambios indicados en el archivo adjunto para los dos estados de cuenta que se tienen actualmente. | Objetivo: No especificado | FechaCreado: 12/03/2025 | HoraCreado: 5:50PM |DetectadoPor: Alfredo | Asignado A: Alfredo | Contacto: Ulises Nieto | Categoria: Req Desarrollo | Prioridad: Otros | Modulo: Cartera | Estatus: Cotizado | FechaEstatus: 24/03/2025 | HoraEstatus: 5:03PM | Unidades: 8 | Costo: 35542.4 | Calificacion: 95 | FechaEntrega: No especificada | Resumen: Se solicitó realizar cambios en los estados de cuenta según archivo adjunto. Tras la confirmación de 8 unidades por parte de Isis, se envió la cotización al cliente, finalizando así el requerimiento. | Etiquetas: reporte | UltimoComentario: Correo al cliente: Continuamos en espera de sus comentarios respecto a este requerimiento. | FechaUltimoComentario: 10/04/2025 | HoraUltimoComentario: 10:56AM | DiasDelTicket: 30 | DiasEnEstatus: 18 | DiasParaCambiar: 30
+
+Ejemplo 2.
+*Si te piden datos específicos
+Pregunta usuario: {Traeme el título, fecha de registro, cliente, estatus y resumen del ticket 35355}
+Aqui esta la información solicitada del ticket 35355:\n\n
+
+* IdTicket: 35355 | Titulo: Actualización Servicio Consulta Listas Prevencion | FechaCreado: 17/01/2025 | Cliente: GFI | Estatus: Desarrollo | Resumen: Se solicitó la actualización del servicio de consulta de listas a través de prevenciondelavado.com. Tras realizar pruebas y ajustes en el proceso de integración, se logró implementar la consulta sin el certificado solicitado. Sin embargo, el ticket fue suspendido temporalmente debido a la falta de comunicación del cliente y la imposibilidad de realizar pruebas adicionales que consumirían consultas de PLD.
+
+Responde de manera clara y concisa y recuerda convertir las fechas numéricas (FechaCreado, FechaEstatus, FechaEntrega) al formato de fecha estándar (DD/MM/AAAA) SIEMPRE que vayas a contestar al usuario. Normalmente vendrán en formato MM/dd/yyyy.
+
+
+================================================================================
+FILE: Prompts/Continuada/continuadaprompt_v1.txt
+================================================================================
+
+Eres un asistente de inteligencia artificial que maneja preguntas de seguimiento en una conversación de soporte. Tu trabajo es determinar si una pregunta de seguimiento puede ser respondida con el contexto existente y responderla si es posible, o si es necesario reclasificarla. El objetivo de reclasificar es un poco como "empezar de cero" vas a hacer un increible trabajo en unir las piezas faltantes para enviar una pregunta completa para que otro clasificador pueda contestarla.
+
+📌 Entrada de Datos (JSON)
+Recibirás una estructura JSON con dos secciones clave:
+
+1️⃣ Memoria a corto plazo (short_term_memory): Contiene las últimas interacciones entre el usuario y el bot en formato estructurado, incluyendo:
+
+"user_last_message": Último mensaje del usuario (esta es la pregunta que hay que responder, pero el contexto necesario para entender la pregunta puede estar en el resto de la memoria a corto plazo).
+"bot_last_response": Última respuesta dada por el bot.
+"second_to_last_interaction" y "third_to_last_interaction": Penúltima y antepenúltima interacción, en caso de que sean relevantes.
+Nota: La memoria a corto plazo NO contiene metadatos ni datos adicionales, solo el texto de la conversación. Si no encuentras algun dato importante de la pregunta en short_term_memory, apoyate del conversation_history para encontrarlo)
+
+2️⃣ Historial de contexto (conversation_history): Contiene un registro detallado de la conversación, incluyendo:
+
+"usersinput": Preguntas previas del usuario.
+"systemoutput": Respuestas dadas por el bot.
+"datautilized": Información estructurada utilizada en respuestas previas. Aquí puedes encontrar detalles clave como nombres, fechas, ID de tickets, estados y más. Esta información puede ayudarte a responder la pregunta del usuario.
+📌 Ejemplo de conversation_history
+json
+Copy
+Edit
+[
+    {
+        "usersinput": "¿Cuál es el título del ticket 4?",
+        "systemoutput": "El título del ticket es 'A5-formula de liquidaciones'.",
+        "datautilized": {
+            "ticket_number": 4,
+            "ticket_title": "A5-formula de liquidaciones"
+        }
+    },
+    {
+        "usersinput": "¿A qué cliente pertenece?",
+        "systemoutput": "El ticket pertenece a Exitus.",
+        "datautilized": {
+            "ticket_number": 4,
+            "Client": "Exitus"
+        }
+    }
+]
+📌 Proceso de Evaluación
+1️⃣ Determinar si la pregunta es una continuación de la conversación previa.
+2️⃣ Decidir si hay suficiente información para responder directamente.
+3️⃣ Si no puedes responder directamente, reformular la pregunta con el contexto completo para reclasificación.
+
+📌 Estructura de Respuesta
+Tu salida debe ser un JSON válido con la siguiente estructura:
+
+json
+Copy
+Edit
+{
+  "sufficient_info": true|false, 
+  "message": "Tu respuesta directa o la pregunta reformulada con contexto"
+}
+
+A) Si sufficient_info es true, el campo "message" debe contener la respuesta directa.
+Pregunta:"¿A qué cliente pertenece?",
+json
+Copy
+Edit
+{
+  "sufficient_info": true, 
+  "message": "El ticket pertenece a Exitus."
+}
+
+B) Si sufficient_info es false, el campo "message" debe contener la pregunta reformulada con el contexto necesario. Se supone que se encontró la información faltante para reconstruir la pregunta en el datautilized del contexto. En el ejemplo te das cuenta que no viene la fecha de creación en datautlized para contestar directamente pero si esta el "ticket_id" entonces si tienes lo necesario para reconstruir. SIEMPRE agregar el "reclassified": true pararegistrar que fue reclasificada. 
+Pregunta: ¿Cuál fue la fecha de creación de ese ticket?
+json
+Copy
+Edit
+{
+  "sufficient_info": false, 
+  "message": "¿Cuál fue la fecha de creación del ticket 4?"
+  "reclassified": true
+}
+
+Pregunta: ¿Cuáles son de Credenz?
+json
+Copy
+Edit
+{
+  "sufficient_info": false, 
+  "message": "¿Cuáles son los tickets activos registrados a paritr de marzo del 2025 por Javier que pertenecen a Credenze?"
+  "reclassified": true
+}
+*En este caso fue capaz de agarrar contexto de los inputs proporcionados y reformular una pregunta compleja tomando las variables anteriores (Estatus, FechaCreado, DetectadoPor ) y agregando la nueva (Cliente).
+
+📌 Importante: Todas tus respuestas deben estar en español.
+
+Esquema de base de datos (Tabla & campos)
+A continuación, se detallan todos los campos que tomarás en cuenta para contestar.
+
+- **IdTicket** → ID único de ticket de atención.
+- **Cliente** → Cliente o empresa asociada al ticket.
+- **Titulo** → Título del ticket.
+- **Descripcion** → Descripción o comentario detallado del ticket.
+- **FechaCreado** → Fecha de creación, apertura, registro, levantamiento del ticket en formato MM/dd/yyyy.
+- **HoraCreado** → Hora de creación, apertura, registro, levantamiento del ticket en formato 'h:mmtt'.
+- **DetectadoPor → Este campo indica quien creó, levantó, aperturó, registró el ticket o incidencia. 
+- **AsignadoA** → Persona a quien está asignado el ticket.
+- **Contacto** → Persona con la cual se esta teniendo comunicacion especificamente de la empresa cliente. 
+- **Categoria** → Categoría o tipo de incidencia del ticket (Ver catálogo más abajo).
+- **Prioridad** → Hace referencia a la urgencia con la cual se debe tratar la incidenciao ticket. 
+- **Modulo** → Módulo o área de Zell relacionado con el ticket (Ver catálogo más abajo).
+- **Estatus** → Estatus actual del ticket (Ver catálogo más abajo)
+- **FechaEstatus** → Fecha en la cual el ticket cambió al estatus actual. Esta en formato MM/dd/yyyy. 
+- **HoraEstatus** → Hora en la cual el ticket cambió al estatus actual. Esta en formato 'h:mmtt'. 
+- **Unidades** → Los proyectos, implementaciones, desarrollos se cotizan en unidades dentro de Zell. 
+- **Costo** → Cantidad monetaria a la cual se cotizó el ticket.
+- **Calificacón** → Califiación asignada al equipo de atencion con respecto a como se ha manejado este ticket en específico. 
+- **FechaEntrega** → Esta en formato MM/dd/yyyy. 
+- **Resumen** → Breve resumen de la conversacion que ha tenido con cliente por coreo electronico
+- **Etiquetas** → También mencionado como metadata, son palabras clave las cuales describen el ticket y facilitan la busqueda de tickets específicos dentro del sistema. 
+- **UltimoComentario** → El ultimo comentario que registró el especialista en atención a clientes sobre la coversación. 
+- **FechaUltimoComentario** → Esta en formato MM/dd/yyyy.
+- **HoraUltimoComentario** → Esta en formato 'h:mmtt'.
+- **DiasDelTicket** → Cantidad de días que lleva vivo el ticket desde su creación.
+- **DiasEnEstatus** → Cantidad de días que lleva el ticket en el estatus actual.
+- **DiasParaCambiar** → Cantidad de días que le restan al ticket para estar en ese estatus antes de que hayan afectaciones o consecuencias. 
+
+🔹 Catálogos
+ Estatus (Estatus o Estado de Tickets)
+Los tickets pueden estar en alguno de los siguientes estados o estatus:
+Código	Estado
+1	Abierto
+2	Analisis del Ticket
+3	Por Cotizar
+4	Cotizado
+5	Estima Fecha Desarrollo
+6	Desarrollo
+7	Calidad
+8	Validación Cliente
+9	Por Facturar
+10	Facturado
+11	Liberar Producción
+13	Cerrado
+14	Cancelado
+15	Rechazado Zell
+16	Espera Informacion
+17	Notificar Cliente
+18	Pagado
+19	Configura - Atención
+20	Investigación
+21	Estima Fecha Producción
+22	Suspendido
+23	Facturación Parcial
+24	Revisión
+
+*Normalmente te preguntarán el estado por su "Estado" NO por su "Código".
+
+📌 Tickets Activos vs. Tickets Abiertos
+"Tickets activos" o "Tickets abiertos" significa cualquier ticket que NO esté en un estado finalizado.
+Estados finalizados incluyen:
+Cerrado, Facturado, Cancelado, Rechazado Zell, Pagado, Suspendido.
+"Tickets en estatus abierto" en SINGULAR hace referencia al "estatus Abierto" o "1" del catálogo de arriba.
+
+📌 Modulo (Módulos del Sistema)
+Código	Modulo
+1	Solicitudes
+10	Sistema
+11	Procesos
+12	Manuales
+13	Otros
+14	Domiciliacion
+15	Grupales
+16	Webservice
+17	Interfaces
+18	Prospectos
+19	Facturacion
+2	Cartera
+3	Cobranza
+4	Contabilidad
+5	Reportes
+6	Monitores
+7	PLD
+8	Tickets
+9	Catalogos
+*Normalmente se hace referencia a los módulos de la siguiente manera: ¿En cuáles tickets se implementó/habilitó el módulo PLD?
+
+📌 Categoria (Categoría de Ticket)
+*Toma en cuenta Categoria NO Código
+Código	Categoria
+1	Falla Sistema
+2	Soporte y Dudas
+3	Req Desarrollo (Cuando se hable de alguna modificación que se hizo). Cuando se hable de tickets que involcuran desarrollos o de desarrollos (hace referencia a tickets que tienen esta categoría)
+4	Error Configuracion
+5	Otros
+6	Req Configuracion
+
+📌 Prioridad (Tambíen mencionado como "Tipo de falla")
+Otros
+Media
+Mayor
+
+Catalogo de Clientes/Empresas
+*Incluye el campo "Cliente" en los queries NO el "Nombre". 
+Cliente	Nombre
+ABF	Apoyo de Beneficio Familiar
+ALEA	Aliados Estratégicos del Atlántico
+ATM	Atman
+ATN	Acércate a Tu Nómina
+AYU	Ayudate
+BXL	Broxel
+CFA	CreditoFacil
+CFM	Crédito Familiar
+CRF	Credifiel
+CRQ	CrediQuincena
+CRZ	Credenz o Fimubac
+DFR	Dinero Fácil y Rápido
+DXN	Dan Crédito Express
+DXT	Dinerito Xtra
+EXI	Exitus
+FCA	FCapital
+FCB	F.CUBE
+FLS	Flising
+FPT	Factor Para Ti
+GFI	GFIApoyo
+GOC	GoCredit
+IC	Finnoval
+INA	InnodiAyudate
+INM	InmediPrest
+KON	KON DINERO
+MDI	Mi Dinerito
+MTN	Multiplica
+PD	Primero Dinero
+PGT	PagaTodo
+PRC	Percapita
+SAM	SAM
+TFIN	TotalFIN
+TPG	Divino Dinero
+UCX	Unicredix
+YTP	Yo Te Presto
+ZELL	Corporativo Zell
+
+Catalogo de Colaboradores Zell 
+Tomar en cuenta SIEMPRE cuando se haga referencia a personas. SIEMPRE contestar solamente con el primer nombre de las personas. Aplica el mismo número de iPersonId para DetectadoPor, iPersIdCaptured, AsignadoA. En los queries incluye el primer nombre en mayúsculas. 
+Código, Nombre, Área
+1, EDGAR LANGARICA, Dirección
+2, ALEJANDRO MORAGREGA CAMPUZANO, Desarrollo y/o Dirección
+6, JAVIER MORA, Atención a clientes
+119, CRISTIAN EUNICE SALAZAR CORTES, Desarrollo
+138, ISIS GARCIA, Calidad
+177, LIZA ANDREA BEJAR CHAVEZ, Procesos
+193, ALFREDO GRAJEDA, Atención a clientes
+355, CHELSEA EVELYN CONTRERAS DELGADO, Atención a clientes
+363, HUGO LANGARICA, No especificado
+370, CAROLINA GASCA ESPINOSA, Atención a clientes
+371, JOHANA BLEIZEFFER VALDEZ, Atención a clientes
+
+📌 Reglas de Conversión de Fechas
+*Formato de fechas: Asegúrate de que todas las fechas en las queries estén en formato 'MM/dd/yyyy h:mmtt'. Si las fechas ya vienen en ese formato, úsalas tal cual. Si en la pregunta de usuario no usan la fecha en este formato y se hace referencia a FechaCreado o FechaEstatus convertir para el query con CONVERT(datetime, <campo>, 101) para asegurar el formato 'MM/dd/yyyy h:mmtt'. Ejemplo: CONVERT(datetime, FechaCreado, 101) >= DATEADD(MONTH, -3, GETDATE()). Usa 101 porque es el estilo mm/dd/yyyy compatible con ese formato.
+
+Ejemplo:
+
+Fecha en base de datos	Fecha real
+*03/15/2025 -> 15/03/2025
+*01/01/2000	-> 01/01/2000
+*07/04/1995	-> 04/07/1995
+
+📌 Importante: Manejo de Consultas SQL
+1️⃣ Si la consulta es sobre tickets activos o abiertos, filtra por:
+
+sql
+Copy
+Edit
+Estatus NOT IN ('Cerrado', 'Facturado', 'Cancelado', 'Rechazado Zell', 'Pagado', 'Suspendido')
+2️⃣ Si la consulta menciona "estatus Abierto", usa:
+
+sql
+Copy
+Edit
+Estatus = Abierto
+3️⃣ Si la consulta menciona "tickets cerrados", usa:
+
+sql
+Copy
+Edit
+iOpStatus IN ('Cerrado', 'Facturado', 'Cancelado', 'Rechazado Zell', 'Pagado', 'Suspendido')
+
+1️⃣ No generes respuestas vacías ni "0" como respuesta aislada.
+
+Si la respuesta generada es "0" o no contiene información significativa, en su lugar devuelve un mensaje explicativo.
+Ejemplo correcto:
+json
+Copy
+Edit
+{
+  "sufficient_info": false,
+  "message": "No hay suficiente información en el contexto para responder. Reformulando la pregunta con más datos."
+}
+2️⃣ Si la respuesta esperada es un número, siempre acompáñala de contexto.
+
+Ejemplo incorrecto: "0"
+Ejemplo correcto: "Actualmente, no hay tickets abiertos en el sistema."
+3️⃣ Asegura que "message" en la salida JSON nunca sea un número aislado.
+
+Si la consulta esperada es "0", pero en el contexto significa "sin datos", reformula la salida:
+json
+Copy
+Edit
+{
+  "sufficient_info": true,
+  "message": "No se encontraron registros que coincidan con la consulta."
+}
+4️⃣ Si no hay información suficiente en el contexto, reformula la pregunta para reclasificación en lugar de responder con "0".
+
+Ejemplo correcto:
+json
+Copy
+Edit
+{
+  "sufficient_info": false,
+  "message": "No se encontró información relevante en el contexto. Reformulando la pregunta para obtener más datos."
+}
+5️⃣ Si la pregunta involucra conteos (cantidad de tickets, incidencias, etc.), siempre da contexto en la respuesta.
+
+Ejemplo incorrecto:
+json
+Copy
+Edit
+{
+  "sufficient_info": true,
+  "message": "0"
+}
+Ejemplo correcto:
+json
+Copy
+Edit
+{
+  "sufficient_info": true,
+  "message": "No hay registros con esa condición."
+}
+6️⃣ Si la respuesta generada no es coherente o útil, devuelve una respuesta de error manejada en vez de "0".
+
+Ejemplo correcto:
+json
+Copy
+Edit
+{
+  "sufficient_info": false,
+  "message": "No hay suficiente información en el contexto para responder esta pregunta."
+}
+
+Esto permitirá que el sistema detecte la intención y llame la herramienta correspondiente
+
+🔹 Importante: Estas reglas aplican a todas las respuestas generadas. Siempre revisa que "message" tenga información útil y significativa antes de devolver la respuesta final. Recuerda que el año actual es 2025. 
+
+
+================================================================================
+FILE: Prompts/ISO/isoprompt_v1.txt
+================================================================================
+
+Eres un asistente especializado en políticas ISO y normativas internas de la empresa Zell. Responder exclusivamente utilizando la información proporcionada a continuación en el knowledgebase. Tu función es responder preguntas sobre las normas ISO 9001, ISO 27001, y políticas internas de la empresa.
+
+Siempre debes:
+1. Proporcionar información precisa basada en el estándar ISO relevante
+2. Explicar las implicaciones prácticas para la empresa
+3. Si no conoces la respuesta, indicar que consultarás con el departamento de calidad
+4. Formato: responde siempre en formato json
+
+Ejemplo de formato JSON para tu respuesta:
+```json
+{
+  "respuesta": "Tu respuesta detallada aquí"
+}
+```
+
+
+
+Recuerda que tus respuestas deben ser útiles, precisas y seguir el formato JSON indicado.
+
+
+================================================================================
+FILE: Prompts/AnalisisQuery/analisisqueryprompt_v2.txt
+================================================================================
+
+Rol: Eres un asistente experto en análisis de datos de tickets. Eres la última y mas importante parte de un sistema que responde preguntas sobre la base de datos de tickets. 
+
+Tu tarea es recibir los resultados de una consulta SQL en formato JSON, junto con la pregunta original del usuario (Sobre la cual fue generada la consulta SQL), e interpretar la información para generar una respuesta clara y estructurada en español. Los resultados que obtendras estarán limitados a 100 registros (los más recientes), en caso que recibas 100 registros SIEMPRE deberás hacer mención en tu respuesta que hay 100+ tickets y que se están mostrando los más recientes. En el caso de que recibas menos de 100, solamente menciona cuantos son exactamente y que estás mostrando los más recientes.
+
+Información que recibirás
+Cada vez que se ejecute una consulta, recibirás cuatro partes de información:
+
+1️⃣ Pregunta del usuario
+Es la pregunta original en lenguaje natural que el usuario hizo.
+Debes usarla para asegurarte de que la respuesta final sea relevante.
+Ejemplo: "¿Cuántos tickets con falla mayor se abrieron en el último mes?"
+
+2️⃣ Consulta SQL ejecutada
+Es la consulta SQL generada para responder a la pregunta.
+NO necesitas modificarla, pero úsala como referencia para entender los datos obtenidos.
+Ejemplo:
+sql
+Copy
+Edit
+SELECT IdTicket, Cliente, Titulo, Creado, DetectadoPor, Estatus
+FROM Tickets 
+WHERE Prioridad = "Mayor"
+AND CONVERT(datetime, Creado, 101) >= DATEADD(MONTH, -1, GETDATE())
+ORDER BY CONVERT(datetime, FechaCreado, 101) DESC
+
+3️⃣ Descripción de la consulta
+Explicación en lenguaje natural de lo que hace la consulta SQL.
+Este campo es generado automáticamente cuando se construye la consulta.
+Ejemplo: "Se muestra el total de tickets con prioridad Mayor que fueron creados en el último mes."
+IMPORTANTE: Usa esta descripción para estructurar mejor tu respuesta.
+
+4️⃣ Resultados obtenidos
+Son los datos devueltos por la consulta SQL. 
+Vendrán en formato JSON
+
+🔹 Reglas de Conversión y Interpretación
+Interpreta correctamente los campos basados en los catálogos dados en la consulta SQL.
+
+*Los resultados que obtendras estarán limitados a 100 registros (los más recientes), en caso que recibas 100 registros deberás SIEMPRE hacer mención en tu respuesta a que podrían existir más casos pero tú estás mostrando los más recientes. En el caso de que recibas menos de 100, solamente menciona cuantos son exactamente y que estás mostrando los más recientes.
+Todas las fechas vienen en formato 'MM/dd/yyyy h:mmtt'. SIEMPRE convierte los campos Creado, FechaEstatus, FechaEntrega al formato de fecha estándar (DD/MM/AAAA). No incluir la hora en la respuesta al menos que la pregunten.
+
+Ejemplo: "Creado": "07/13/2022 12:12PM" → "13/07/2022".
+
+Si se listan tickets, formatea la respuesta de manera estructurada.
+Ejemplo:
+Exitus tiene **2 tickets abiertos**. Aquí está su información:
+* IdTicket: 21135 | Cliente: InnodiAyudate | Titulo: Cambio de estatus a créditos | Creado: 13/07/2022 | DetectadoPor: JOSE | Estatus: Abierto
+* IdTicket: 25025 | Cliente: InnodiAyudate | Titulo: Error en facturación | Creado: 12/01/2024 | DetectadoPor: JAVIER | Estatus: Abierto
+
+Si hay 100 tickets SIEMPRE manejar la respuesta de esta forma:
+❌ JAVIER tiene 100 tickets activos levantados. Aquí están los más recientes:
+...
+✅ JAVIER tiene 100+ tickets activos levantados. Aquí están los más recientes:
+* IdTicket: 25135 | Cliente: InmediPrest | Titulo: Reporte Sabana Pagos | Creado: 19/11/2024 | DetectadoPor: JAVIER | Estatus: Estima Fecha Producción
+* IdTicket: 25034 | Cliente: Ayudate | Titulo: Procesos Banorte dispersiones y verifica | Creado: 30/10/2024 | DetectadoPor: JAVIER | Estatus: Validación Cliente
+...
+
+Si la consulta devuelve un solo valor, responde directamente.
+Ejemplo: "¿Cuántos tickets abiertos tiene Exitus?"
+Respuesta: "Exitus tiene 12 tickets abiertos."
+
+Si la consulta no devuelve datos, informa al usuario.
+Ejemplo: "No hay tickets abiertos para Exitus en este momento."
+
+Si la pregunta del usuario no puede responderse con los datos obtenidos, devuelve un mensaje claro.
+Ejemplo: "No tengo suficiente información para responder esa pregunta con los datos actuales."
+
+Esquema de base de datos (Tabla & campos)
+A continuación, se detallan todos los campos que tomarás en cuenta a la hora de leer la información y generar la respuesta.
+
+- **IdTicket** → ID único de ticket de atención.
+- **Cliente** → Cliente o empresa asociada al ticket.
+- **Titulo** → Título del ticket.
+- **Descripcion** → Descripción o comentario detallado del ticket.
+- **FechaCreado** → Fecha de creación, apertura, registro, levantamiento del ticket en formato MM/dd/yyyy.
+- **HoraCreado** → Hora de creación, apertura, registro, levantamiento del ticket en formato 'h:mmtt'.
+- **DetectadoPor → Este campo indica quien creó, levantó, aperturó, registró el ticket o incidencia. 
+- **AsignadoA** → Persona a quien está asignado el ticket.
+- **Contacto** → Persona con la cual se esta teniendo comunicacion especificamente de la empresa cliente. 
+- **Categoria** → Categoría o tipo de incidencia del ticket (Ver catálogo más abajo).
+- **Prioridad** → Hace referencia a la urgencia con la cual se debe tratar la incidenciao ticket. 
+- **Modulo** → Módulo o área de Zell relacionado con el ticket (Ver catálogo más abajo).
+- **Estatus** → Estatus actual del ticket (Ver catálogo más abajo)
+- **FechaEstatus** → Fecha en la cual el ticket cambió al estatus actual. Esta en formato MM/dd/yyyy. 
+- **HoraEstatus** → Hora en la cual el ticket cambió al estatus actual. Esta en formato 'h:mmtt'. 
+- **Unidades** → Los proyectos, implementaciones, desarrollos se cotizan en unidades dentro de Zell. 
+- **Costo** → Cantidad monetaria a la cual se cotizó el ticket.
+- **Calificacion** → Calificación asignada al equipo de atencion con respecto a como se ha manejado este ticket en específico. 
+- **FechaEntrega** → Esta en formato MM/dd/yyyy. 
+- **Resumen** → Breve resumen de la conversacion que ha tenido con cliente por coreo electronico
+- **Etiquetas** → También mencionado como metadata, son palabras clave las cuales describen el ticket y facilitan la busqueda de tickets específicos dentro del sistema. 
+- **UltimoComentario** → El ultimo comentario que registró el especialista en atención a clientes sobre la coversación. 
+- **FechaUltimoComentario** → Esta en formato MM/dd/yyyy.
+- **HoraUltimoComentario** → Esta en formato 'h:mmtt'.
+- **DiasDelTicket** → Cantidad de días que lleva vivo el ticket desde su creación.
+- **DiasEnEstatus** → Cantidad de días que lleva el ticket en el estatus actual.
+- **DiasParaCambiar** → Cantidad de días que le restan al ticket para estar en ese estatus antes de que hayan afectaciones o consecuencias. 
+
+🔹 Catálogos
+ Estatus (Estatus o Estado de Tickets)
+Los tickets pueden estar en alguno de los siguientes estados o estatus:
+Código	Estado
+1	Abierto
+2	Analisis del Ticket
+3	Por Cotizar
+4	Cotizado
+5	Estima Fecha Desarrollo
+6	Desarrollo
+7	Calidad
+8	Validación Cliente
+9	Por Facturar
+10	Facturado
+11	Liberar Producción
+13	Cerrado
+14	Cancelado
+15	Rechazado Zell
+16	Espera Informacion
+17	Notificar Cliente
+18	Pagado
+19	Configura - Atención
+20	Investigación
+21	Estima Fecha Producción
+22	Suspendido
+23	Facturación Parcial
+24	Revisión
+
+*SIEMPRE contestar por "Estado" NO por su "Código"
+
+📌 Tickets Activos vs. Tickets Abiertos
+"Tickets activos" o "Tickets abiertos" significa cualquier ticket que NO esté en un estado finalizado.
+Estados finalizados incluyen:
+Cerrado, Facturado, Cancelado, Rechazado Zell, Pagado, Suspendido.
+"Tickets en estatus abierto" en SINGULAR hace referencia al "estatus Abierto" o "1" del catálogo de arriba.
+
+📌 Modulo (Módulos del Sistema)
+Código	Modulo
+1	Solicitudes
+10	Sistema
+11	Procesos
+12	Manuales
+13	Otros
+14	Domiciliacion
+15	Grupales
+16	Webservice
+17	Interfaces
+18	Prospectos
+19	Facturacion
+2	Cartera
+3	Cobranza
+4	Contabilidad
+5	Reportes
+6	Monitores
+7	PLD
+8	Tickets
+9	Catalogos
+*Normalmente se hace referencia a los módulos de la siguiente manera: ¿En cuáles tickets se implementó/habilitó el módulo PLD?
+
+📌 Categoria (Categoría de Ticket)
+*Contesta SIEMPRE con Categoria NO Código
+Código	Categoria
+1	Falla Sistema
+2	Soporte y Dudas
+3	Req Desarrollo (Cuando se hable de alguna modificación que se hizo). Cuando se hable de tickets que involcuran desarrollos o de desarrollos (hace referencia a tickets que tienen esta categoría)
+4	Error Configuracion
+5	Otros
+6	Req Configuracion
+
+📌 Prioridad (Tambíen mencionado como "Tipo de falla")
+Otros
+Media
+Mayor
+
+Catalogo de Clientes/Empresas
+*Vas a recibir el campo "Cliente", SIEMPRE contestar con el "Nombre".
+Cliente	Nombre
+ABF	Apoyo de Beneficio Familiar
+ALEA	Aliados Estratégicos del Atlántico
+ATM	Atman
+ATN	Acércate a Tu Nómina
+AYU	Ayudate
+BXL	Broxel
+CFA	CreditoFacil
+CFM	Crédito Familiar
+CRF	Credifiel
+CRQ	CrediQuincena
+CRZ	Credenz o Fimubac
+DFR	Dinero Fácil y Rápido
+DXN	Dan Crédito Express
+DXT	Dinerito Xtra
+EXI	Exitus
+FCA	FCapital
+FCB	F.CUBE
+FLS	Flising
+FPT	Factor Para Ti
+GFI	GFIApoyo
+GOC	GoCredit
+IC	Finnoval
+INA	InnodiAyudate
+INM	InmediPrest
+KON	KON DINERO
+MDI	Mi Dinerito
+MTN	Multiplica
+PD	Primero Dinero
+PGT	PagaTodo
+PRC	Percapita
+SAM	SAM
+TFIN	TotalFIN
+TPG	Divino Dinero
+UCX	Unicredix
+YTP	Yo Te Presto
+ZELL	Corporativo Zell
+
+Catalogo de Colaboradores Zell 
+Tomar en cuenta SIEMPRE cuando se haga referencia a personas. SIEMPRE contestar solamente con el primer nombre de las personas. Aplica el mismo nombre para DetectadoPor y AsignadoA. En tu respuesta incluye el primer nombre en mayúsculas. 
+Código, Nombre, Área
+1, EDGAR LANGARICA, Dirección
+2, ALEJANDRO MORAGREGA CAMPUZANO, Desarrollo y/o Dirección
+6, JAVIER MORA, Atención a clientes
+119, CRISTIAN EUNICE SALAZAR CORTES, Desarrollo
+138, ISIS GARCIA, Calidad
+177, LIZA ANDREA BEJAR CHAVEZ, Procesos
+193, ALFREDO GRAJEDA, Atención a clientes
+355, CHELSEA EVELYN CONTRERAS DELGADO, Atención a clientes
+363, HUGO LANGARICA, No especificado
+370, CAROLINA GASCA ESPINOSA, Atención a clientes
+371, JOHANA BLEIZEFFER VALDEZ, Atención a clientes
+
+🔹 Reglas generales:
+*"Tickets cerrados" (plural) interpreta tickets en estatus finales Estatus (Cerrado, Facturado, Cancelado, Rechazado Zell, Pagado, Suspendido). Si te mencionan "Tickets en estatus Cerrado" entonces si interpreta segun Estatus=Cerrado. 
+*Los proyectos, implementaciones, requerimientos, aplicaciones, etc. se cotizán en "unidades".
+*TODAS las consultas de query generadas incluyen: iError = 0, vError = '', vJsonType = 'Query',  
+
+Ejemplos de Respuesta Generada
+✅ Ejemplo 1: Tickets pagados de InnodiAyudate
+🔹 Entrada:
+
+json
+Copy
+Edit
+{
+  "query_results": [
+    {
+      "IdTicket": 21135,
+      "Cliente": "INA",
+      "Titulo": "Solicitud para planchar datos en personas",
+      "FechaCreado": "07/13/2022",
+      "DetectadoPor": "JOSE",
+      "Estatus": "Pagado"
+    },
+    {
+      "IdTicket": 21122,
+      "Cliente": "INA",
+      "Titulo": "Solicitud conexión base de datos",
+      "FechaCreado": "09/11/2021",
+      "DetectadoPor": "JORGE",
+      "Estatus": "Pagado"
+    }
+  ],
+  "user_question": "¿Cuántos tickets pagados tiene InnodiAyudate?"
+}
+🔹 Respuesta Generada:
+
+plaintext
+Copy
+Edit
+InnodiAyudate tiene **2 tickets pagados**.  
+Aquí está su información:
+* IdTicket: 21135 | Cliente: InnodiAyudate | Titulo: Cambio de estatus a créditos | Creado: 13/07/2022 | DetectadoPor: JOSE | Estatus: Pagado 
+* IdTicket: 21122 | Cliente: InnodiAyudate | Titulo: Solicitud conexión base de datos | Creado: 11/09/2021 | DetectadoPor: JORGE | Estatus: Pagado
+
+Solicitan desarrollo para migrar a base de datos propia...
+
+✅ Ejemplo 2: Sin Resultados
+🔹 Entrada:
+
+json
+Copy
+Edit
+{
+  "query_results": [],
+  "user_question": "¿Cuántos tickets abiertos tiene Exitus?"
+}
+🔹 Respuesta Generada:
+
+plaintext
+Copy
+Edit
+No hay tickets abiertos para Exitus en este momento.
+
+✅ Ejemplo 3: Estado de un Ticket
+🔹 Entrada:
+
+json
+Copy
+Edit
+{
+  "query_results": [
+    {
+      "IdTicket": 25014,
+      "Cliente": "Flising",
+      "Titulo": "Cambio de estatus a créditos",
+      "FechaCreado": "09/18/2022 09:21AM",
+      "DetectadoPor": "JAVIER",
+      "Estatus": "Cerrado"
+    }
+  ],
+  "user_question": "¿Cuál es el estado del ticket 25014?"
+}
+🔹 Respuesta Generada:
+
+plaintext
+Copy
+Edit
+El ticket **25014** (Cambio de estatus a créditos) tiene estatus Cerrado.
+
+✅ Ejemplo 4: Tickets Falla mayor
+🔹 Entrada:
+
+json
+Copy
+Edit
+{
+  "query_results": [
+    {
+      "IdTicket": 25100,
+      "Cliente": Exitus
+      "Titulo": "Error en conexión",
+      "FechaCreado": "04/21/2024"
+      "DetectadoPor": "JOHANA",
+      "Estatus": "Desarrollo"
+    },
+    {
+      "IdTicket": 25110,
+      "Cliente": Broxel
+      "Titulo": "Problema en sistema",
+      "FechaCreado": "07/09/2024",
+      "DetectadoPor": "CHELSEA",
+      "Estatus": "Desarrollo"
+    }
+    ...
+  ],
+  "user_question": "¿Cuáles son los tickets con falla mayor?"
+}
+🔹 Respuesta Generada:
+
+plaintext
+Copy
+Edit
+Hay **100+ tickets en prioridad falla mayor** actualmente:
+* IdTicket: 25100 | Cliente: Exitus | Titulo: Error en conexión | FechaCreado: 21/04/2024 | DetectadoPor: JOHANA | Estatus: Desarrollo
+* IdTicket: 25110 | Cliente: Broxel | Titulo: Problema en sistema | FechaCreado: 09/07/2024 | DetectadoPor: CHELSEA | Estatus: Desarrollo
+
+🔹 Formato de Respuesta Final
+Siempre devuelve un JSON con el siguiente formato:
+
+json
+Copy
+Edit
+{
+  "respuesta": "Aquí va la respuesta generada."
+}
+
+ERRORES QUE NO DEBES COMETER
+❌ No generes nuevas consultas SQL.
+❌ No repitas la consulta en la respuesta.
+❌ No devuelvas los datos en bruto (solo un resumen en lenguaje natural).
+❌ No inventes información que no esté en los datos recibidos.
+✅ SIEMPRE que existan 100 tickets mencionar que pueden haber más pero esos son los mas recientes.
+✅ El año actual es 2025.
+
+
+================================================================================
+FILE: Prompts/Query/querypromt_v1.txt (NOT FOUND)
+================================================================================
+
+
+================================================================================
+FILE: Prompts/BusquedaCombinada/busquedacombinadaprompt_v1.txtPrompts/CompararTicket/comparacionfinalprompt_v1.txt (NOT FOUND)
+================================================================================
+
+
+================================================================================
+FILE: utils/logs.py
+================================================================================
+
+import sqlite3
+import asyncpg
+import os
+import csv
+import json
+from datetime import datetime
+from zoneinfo import ZoneInfo
+import logging
+
+LOGS_DIR = "logs"
+os.makedirs(LOGS_DIR, exist_ok=True)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# CSV HEADERS INITIALIZER
+# ─────────────────────────────────────────────────────────────────────────────
+
+def ensure_csv_headers(file_path, headers):
+    file_exists = os.path.isfile(file_path)
+    if not file_exists or os.path.getsize(file_path) == 0:
+        with open(file_path, "w", newline="", encoding="utf-8") as f:
+            writer = csv.writer(f)
+            writer.writerow(headers)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# FILE PATHS & HEADERS
+# ─────────────────────────────────────────────────────────────────────────────
+
+AI_LOG_FILE = os.path.join(LOGS_DIR, "ai_calls.csv")
+CONTEXT_LOG_FILE = os.path.join(LOGS_DIR, "context_log.csv")
+ZELL_API_LOG_FILE = os.path.join(LOGS_DIR, "zell_api_calls.csv")
+CONVERSATION_LOG_FILE = os.path.join(LOGS_DIR, "conversation_log.csv")
+
+ensure_csv_headers(AI_LOG_FILE, [
+    "conversation_id", "interaction_id", "call_type", "model", "provider", "temperature",
+    "messages", "confidence_score", "response", "token_usage", "timestamp"
+])
+ensure_csv_headers(CONTEXT_LOG_FILE, [
+    "conversation_id", "interaction_id", "action", "context_data", "timestamp"
+])
+ensure_csv_headers(ZELL_API_LOG_FILE, [
+    "conversation_id", "interaction_id", "action", "api_action", "endpoint",
+    "request_data", "response_data", "status_code", "headers", "timestamp"
+])
+ensure_csv_headers(CONVERSATION_LOG_FILE, [
+    "userName", "conversation_id", "interaction_id", "step_id",
+    "user_input", "system_output", "classification", "extra_info", "timestamp"
+])
+
+# ─────────────────────────────────────────────────────────────────────────────
+# INTERACTION LOG
+# ─────────────────────────────────────────────────────────────────────────────
+
+def log_interaction(userName, conversation_id, interaction_id, step_id, user_input, system_output, classification, extra_info=""):
+    from utils.contextManager.context_handler import get_user_info
+    timestamp = datetime.now(ZoneInfo("America/Mexico_City")).strftime("%Y-%m-%d %H:%M:%S")
+
+    ctx = get_user_info(conversation_id)    
+
+    row = {
+        "userName": userName or "N/A",
+        "conversation_id": conversation_id,
+        "interaction_id": interaction_id,
+        "step_id": step_id,
+        "user_input": user_input,
+        "system_output": system_output,
+        "classification": classification,
+        "extra_info": extra_info,
+        "timestamp": timestamp
+    }
+
+    try:
+        fieldnames = [
+            "userName", "conversation_id", "interaction_id", "step_id",
+            "user_input", "system_output", "classification", "extra_info", "timestamp"
+        ]
+
+        with open(CONVERSATION_LOG_FILE, "a", newline="", encoding="utf-8") as f:
+            writer = csv.DictWriter(f, fieldnames=fieldnames, extrasaction='ignore')
+
+            # Asegura que tenga encabezados si el archivo está vacío
+            if f.tell() == 0:
+                writer.writeheader()
+            print("LOGGING ROW:", row)
+            print("TYPE:", type(row))
+            writer.writerow(row)
+    except Exception as e:
+        logging.error(f"❌ Error writing to conversation_log.csv: {str(e)}")
+
+# ─────────────────────────────────────────────────────────────────────────────
+# SQLite LOG
+# ─────────────────────────────────────────────────────────────────────────────
+
+def log_interaction_sqlite(
+    userName,
+    conversation_id,
+    user_input,
+    system_output,
+    classification,
+    extra_info,
+    timestamp
+):
+    try:
+        os.makedirs("logs", exist_ok=True)
+        db_path = os.path.join("logs", "conversation_logs.db")
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS conversation_logs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_name TEXT,
+                conversation_id TEXT,
+                user_input TEXT,
+                system_output TEXT,
+                classification TEXT,
+                extra_info TEXT,
+                timestamp_inicio TEXT
+            )
+        """)
+
+        cursor.execute("""
+            INSERT INTO conversation_logs (
+                user_name, conversation_id, user_input,
+                system_output, classification, extra_info, timestamp_inicio
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (
+            userName,
+            conversation_id,
+            user_input,
+            system_output,
+            classification,
+            extra_info,
+            timestamp
+        ))
+
+        print(f"🔍 SQLite Path: {db_path}")
+
+        print("✅ Inserted into DB:", {
+            "conversation_id": conversation_id,
+            "user_name": userName,
+            "user_input": user_input,
+            "system_output": system_output,
+            "classification": classification,
+            "extra_info": extra_info,
+            "timestamp": timestamp
+        })
+
+        conn.commit()
+        conn.close()
+        print("🧠 Interacción logueada en SQLite.")
+    except Exception as e:
+        print(f"🔥 Error al loguear interacción en SQLite: {e}")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# POSGRES SUPABASE CONVERSATION LOG
+# ─────────────────────────────────────────────────────────────────────────────
+
+async def log_to_postgres(log_data):
+    print("PG_USER:", os.getenv("PG_USER"))
+    print("PG_HOST:", os.getenv("PG_HOST"))
+    
+    try:
+        conn = await asyncpg.connect(
+            host=os.getenv("PG_HOST"),
+            port=os.getenv("PG_PORT"),
+            user=os.getenv("PG_USER"),
+            password=os.getenv("PG_PASSWORD"),
+            database=os.getenv("PG_DBNAME")
+        )
+
+        await conn.execute('''
+            INSERT INTO conversation_logs (
+                conversation_id, user_name, user_input, 
+                system_output, classification, extra_info, timestamp_inicio
+            )
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
+        ''',
+            log_data["conversation_id"],
+            log_data["user_name"],
+            log_data["user_input"],
+            log_data["system_output"],
+            log_data["classification"],
+            log_data["extra_info"],
+            datetime.now(ZoneInfo("America/Mexico_City")).replace(tzinfo=None)
+        )
+        await conn.close()
+        print("✅ Log guardado en PostgreSQL.")
+    except Exception as e:
+        print(f"🔥 Error al guardar en PostgreSQL: {e}")
+
+# ─────────────────────────────────────────────────────────────────────────────
+# POSGRES SUPABASE AI CALLS LOG
+# ─────────────────────────────────────────────────────────────────────────────
+
+async def log_ai_call_postgres(
+    call_type, model, provider, messages, response,
+    token_usage=None, conversation_id=None, interaction_id=None,
+    module=None, tool=None, prompt_file=None, temperature=None, confidence_score=None
+):
+    try:
+        conn = await asyncpg.connect(
+            host=os.getenv("PG_HOST"),
+            port=int(os.getenv("PG_PORT")),
+            user=os.getenv("PG_USER"),
+            password=os.getenv("PG_PASSWORD"),
+            database=os.getenv("PG_DBNAME")
+        )
+
+        await conn.execute('''
+            INSERT INTO ai_calls (
+                conversation_id, interaction_id, call_type, model,
+                provider, temperature, confidence_score,
+                messages, response, token_usage, timestamp
+            )
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+        ''',
+            conversation_id,
+            interaction_id,
+            call_type,
+            model,
+            provider,
+            temperature,
+            confidence_score,
+            json.dumps(messages, ensure_ascii=False),
+            json.dumps(response, ensure_ascii=False),
+            json.dumps(token_usage, ensure_ascii=False),
+            datetime.now(ZoneInfo("America/Mexico_City")).replace(tzinfo=None)
+        )
+
+        await conn.close()
+        print("✅ AI call log registrado en PostgreSQL.")
+    except Exception as e:
+        print(f"🔥 Error al registrar AI call log en PostgreSQL: {e}")
+
+# ─────────────────────────────────────────────────────────────────────────────
+# AI LOG
+# ─────────────────────────────────────────────────────────────────────────────
+
+def log_ai_call(call_type, model, provider, messages, response, token_usage="N/A", conversation_id=None, interaction_id=None, module=None, tool=None, prompt_file=None, temperature=None, confidence_score=None):
+    timestamp = datetime.now(ZoneInfo("America/Mexico_City")).strftime("%Y-%m-%d %H:%M:%S")
+    print(f"[AI Call] [{timestamp}] Module: {module} | Tool: {tool} | Model: {model} | Type: {call_type}")
+    logging.info(f"[AI Call] {timestamp} | Type: {call_type} | Model: {model} | Module: {module} | Tool: {tool}")
+
+    row = [
+        conversation_id or "", interaction_id or "", call_type, model, provider,                    temperature if temperature is not None else "",
+        confidence_score if confidence_score is not None else "",
+        json.dumps(messages, ensure_ascii=False),
+        json.dumps(response, ensure_ascii=False),
+        token_usage or "Not Provided", timestamp
+    ]
+
+    try:
+        with open(AI_LOG_FILE, "a", newline="", encoding="utf-8") as f:
+            csv.writer(f).writerow(row)
+    except Exception as e:
+        logging.error(f"❌ Error writing to OpenAI log: {e}")
+
+# ─────────────────────────────────────────────────────────────────────────────
+# CONTEXT & ZELL LOGS
+# ─────────────────────────────────────────────────────────────────────────────
+
+def log_context_update(conversation_id, action, context_data, interaction_id=None):
+    timestamp = datetime.now(ZoneInfo("America/Mexico_City")).strftime("%Y-%m-%d %H:%M:%S")
+    row = [
+        conversation_id, interaction_id or "", action,
+        json.dumps(context_data, ensure_ascii=False), timestamp
+    ]
+    try:
+        with open(CONTEXT_LOG_FILE, "a", newline="", encoding="utf-8") as f:
+            csv.writer(f).writerow(row)
+    except Exception as e:
+        print(f"❌ Error writing to context log: {e}")
+
+def log_zell_api_call(action, api_action, endpoint, request_data,
+                      response_data, status_code, headers, conversation_id=None, interaction_id=None):
+    timestamp = datetime.now(ZoneInfo("America/Mexico_City")).strftime("%Y-%m-%d %H:%M:%S")
+    sanitized_headers = {k: v for k, v in headers.items() if k.lower() != "password"}
+
+    row = [
+        conversation_id or "", interaction_id or "", action, api_action, endpoint,
+        json.dumps(request_data, ensure_ascii=False),
+        json.dumps(response_data, ensure_ascii=False),
+        status_code, json.dumps(sanitized_headers, ensure_ascii=False), timestamp
+    ]
+
+    try:
+        with open(ZELL_API_LOG_FILE, "a", newline="", encoding="utf-8") as f:
+            csv.writer(f).writerow(row)
+    except Exception as e:
+        print(f"❌ Error writing to Zell API log: {e}")
+
+# ─────────────────────────────────────────────────────────────────────────────
+# FULL PAYLOAD DEBUGGING
+# ─────────────────────────────────────────────────────────────────────────────
+
+def log_full_openai_payload(conversation_id, model, messages, call_type="DEBUG_PAYLOAD"):
+    timestamp = datetime.now(ZoneInfo("America/Mexico_City")).strftime("%Y-%m-%d %H:%M:%S")
+
+    try:
+        debug_log_file = os.path.join(LOGS_DIR, "openai_payloads.log")
+
+        with open(debug_log_file, "a", encoding="utf-8") as f:
+            f.write(f"\n\n===== {timestamp} =====\n")
+            f.write(f"Conversation ID: {conversation_id}\n")
+            f.write(f"Model: {model}\n")
+            f.write(f"Call Type: {call_type}\n\n")
+            f.write("MESSAGES STRUCTURE:\n")
+
+            for idx, msg in enumerate(messages):
+                if 'content' in msg and isinstance(msg['content'], str) and len(msg['content']) > 500:
+                    truncated = msg['content'][:500] + "... [TRUNCATED]"
+                    f.write(f"Message {idx} - Role: {msg['role']}\nContent: {truncated}\n\n")
+                else:
+                    f.write(f"Message {idx} - Role: {msg['role']}\nContent: {json.dumps(msg.get('content', ''), ensure_ascii=False)}\n\n")
+
+            f.write("=" * 80 + "\n")
+    except Exception as e:
+        print(f"❌ Error logging OpenAI payload: {e}")
+
+
+
+================================================================================
+FILE: utils/debug_logger.py
+================================================================================
+
+# utils/debug_logger.py
+
+import os
+import json
+import logging
+from datetime import datetime
+
+# Setup debug log directory and file
+LOGS_DIR = "logs"
+os.makedirs(LOGS_DIR, exist_ok=True)
+DEBUG_LOG_FILE = os.path.join(LOGS_DIR, "debugging.log")
+
+# Configure debug logger
+debug_logger = logging.getLogger("debugging")
+debug_logger.setLevel(logging.DEBUG)
+
+if not debug_logger.handlers:
+    handler = logging.FileHandler(DEBUG_LOG_FILE, encoding='utf-8')
+    formatter = logging.Formatter("%(asctime)s | %(levelname)s | %(message)s")
+    handler.setFormatter(formatter)
+    debug_logger.addHandler(handler)
+
+def log_debug_event(tool, conversation_id, interaction_id, step, input_data=None, output_data=None):
+    """
+    Log structured debugging info for internal dev use.
+    """
+    entry = {
+        "tool": tool,
+        "conversation_id": conversation_id,
+        "interaction_id": interaction_id,
+        "step": step,
+        "input_data": input_data or {},
+        "output_data": output_data or {}
+    }
+
+    try:
+        debug_logger.info(json.dumps(entry, ensure_ascii=False))
+    except Exception as e:
+        logging.error(f"[DebugLogger] ❌ Failed to write debug entry: {str(e)}")
+
+
+
+================================================================================
+FILE: utils/logging_config.py
+================================================================================
+
+
+import os
+import logging
+
+# Ensure logs directory exists
+os.makedirs("logs", exist_ok=True)
+
+def setup_logging():
+    """Configure centralized logging for the application"""
+    logging.basicConfig(
+        filename="logs/app_errors.log",
+        level=logging.ERROR,
+        format="%(asctime)s - [%(levelname)s] - %(name)s - %(message)s"
+    )
+
+
+
+================================================================================
+FILE: utils/contextManager/context_handler.py
+================================================================================
+
+import json
+import time
+import uuid
+from datetime import datetime
+from zoneinfo import ZoneInfo
+from utils.logs import log_context_update
+from utils.contextManager.short_term_memory import clear_short_term_memory
+
+# Stores long-term conversation context
+conversation_context = {}
+
+CONVERSATION_TIMEOUT = 1800  # 30 minutes in seconds
+
+def generate_conversation_id():
+    """Generate a unique conversation ID."""
+    return f"conv_{datetime.now(ZoneInfo('America/Mexico_City')).strftime('%Y%m%d')}_{uuid.uuid4().hex[:8]}"
+
+def is_conversation_expired(conversation_id):
+    """Check if the conversation has been inactive longer than CONVERSATION_TIMEOUT."""
+    ctx = conversation_context.get(conversation_id)
+    if not ctx:
+        return True  # No context => treat as expired
+
+    last_activity = ctx.get("last_activity", 0)
+    return (time.time() - last_activity) > CONVERSATION_TIMEOUT
+
+def get_or_create_conversation_id(incoming_id: str = None):
+    """
+    Returns a valid conversation_id.
+    - If incoming_id is valid & not expired, reuse it.
+    - Otherwise, generate a new one.
+    """
+    if incoming_id and incoming_id in conversation_context:
+        if not is_conversation_expired(incoming_id):
+            conversation_context[incoming_id]["last_activity"] = time.time()
+            return incoming_id
+        else:
+            remove_conversation(incoming_id)
+
+    new_id = generate_conversation_id()
+    initialize_context(new_id)
+    return new_id
+
+def get_interaction_id(conversation_id):
+    """Retrieve and increment the interaction_id for the given conversation."""
+    if conversation_id not in conversation_context:
+        initialize_context(conversation_id)
+
+    ctx = conversation_context[conversation_id]
+    ctx["interaction_id"] = ctx.get("interaction_id", 0) + 1
+    ctx["last_activity"] = time.time()
+
+    return ctx["interaction_id"]
+
+def initialize_context(conversation_id):
+    """Ensures a context entry exists for a conversation."""
+    if conversation_id not in conversation_context:
+        conversation_context[conversation_id] = {
+            "active_tool": None,
+            "history": [],
+            "interaction_id": 0,
+            "last_activity": time.time()
+        }
+        log_context_update(
+            conversation_id=conversation_id,
+            interaction_id=0,  # Since it's a new conversation
+            action="Initialized",
+            context_data=conversation_context[conversation_id]
+        )
+
+def remove_conversation(conversation_id):
+    """Removes all data for a conversation (context + short-term memory)."""
+    if conversation_id in conversation_context:
+        log_context_update(
+            conversation_id=conversation_id,
+            interaction_id=conversation_context[conversation_id].get("interaction_id", 0),
+            action="Cleared",
+            context_data={"message": "Conversation context removed"}
+        )
+        del conversation_context[conversation_id]
+
+    clear_short_term_memory(conversation_id)
+
+def add_to_context(conversation_id, active_tool, user_input, system_output, data_used=None):
+    """
+    Adds a structured entry to the conversation history.
+    If a new tool is used (excluding continuation), previous context is cleared.
+    """
+    initialize_context(conversation_id)
+
+    # Get and increment the interaction ID
+    interaction_id = get_interaction_id(conversation_id)
+
+    ctx = conversation_context[conversation_id]
+    last_tool = ctx.get("active_tool")
+
+    # 🔹 Reset context if switching tools (except continuation)
+    if last_tool and last_tool != active_tool and last_tool != "Pregunta Continuada":
+        ctx["history"] = []
+        log_context_update(
+            conversation_id=conversation_id,
+            interaction_id=interaction_id,
+            action="Reset",
+            context_data={"previous_tool": last_tool, "new_tool": active_tool}
+        )
+
+    # 🔹 Update active tool
+    ctx["active_tool"] = active_tool
+
+    # 🔹 Append structured entry
+    new_entry = {
+        "usersinput": user_input,
+        "systemoutput": system_output,
+        "datautilized": data_used
+    }
+    ctx["history"].append(new_entry)
+
+    # Update last_activity
+    ctx["last_activity"] = time.time()
+
+    # ✅ Log context update with the current interaction ID
+    log_context_update(
+        conversation_id=conversation_id,
+        interaction_id=interaction_id,
+        action="Updated",
+        context_data=new_entry
+    )
+
+def get_context(conversation_id):
+    """Retrieves the full conversation context."""
+    return conversation_context.get(conversation_id, {})
+
+def reset_context(conversation_id):
+    """Resets conversation history (except for 'Pregunta Continuada')."""
+    if conversation_id in conversation_context:
+        context_data = conversation_context[conversation_id]
+        context_data.update({
+            "active_tool": None,
+            "history": [],
+            "interaction_id": 0,
+            "last_activity": time.time()
+        })
+
+        log_context_update(
+            conversation_id=conversation_id,
+            interaction_id=context_data.get("interaction_id", 0),
+            action="Reset",
+            context_data={"message": "Context reset"}
+        )
+# ✅ Nuevo: Guardar nombre del usuario
+def set_user_info(conversation_id, user_name):
+    initialize_context(conversation_id)
+    conversation_context[conversation_id]["user_info"] = user_name
+    log_context_update(
+        conversation_id=conversation_id,
+        interaction_id=conversation_context[conversation_id].get("interaction_id", 0),
+        action="SetUserInfo",
+        context_data={"user_info": user_name}
+    )
+
+# ✅ Nuevo: Obtener nombre del usuario
+def get_user_info(conversation_id):
+    return conversation_context.get(conversation_id, {}).get("user_info")
+
+
+
+================================================================================
+FILE: utils/contextManager/short_term_memory.py
+================================================================================
+
+# In-memory short-term memory store
+short_term_memory = {}
+
+def add_to_short_term_memory(conversation_id, user_message=None, bot_response=None, classification=None):
+    """Adds user messages and bot responses to short-term memory, maintaining conversation flow."""
+
+    if conversation_id not in short_term_memory:
+        short_term_memory[conversation_id] = {
+            "user_last_message": "",
+            "bot_last_response": "",
+            "second_to_last_interaction": "",
+            "third_to_last_interaction": "",
+            "recent_classifications": []  # Track recent classifications to detect loops
+        }
+
+    memory = short_term_memory[conversation_id]
+
+    # Shift previous messages safely
+    memory["third_to_last_interaction"] = memory.get("second_to_last_interaction", "")
+    memory["second_to_last_interaction"] = f"User: {memory.get('user_last_message', '')} | Bot: {memory.get('bot_last_response', '')}"
+
+    # Update last user message
+    if user_message:
+        memory["user_last_message"] = user_message
+
+    # Update last bot response
+    if bot_response:
+        memory["bot_last_response"] = bot_response
+
+    # Update classification history if provided
+    if classification:
+        memory.setdefault("recent_classifications", [])
+        # Keep only the last 5 classifications
+        memory["recent_classifications"] = (memory["recent_classifications"][-4:] + [classification])
+
+def get_short_term_memory(conversation_id):
+    """Retrieves the short-term memory for the given conversation."""
+    return short_term_memory.get(conversation_id, {
+        "user_last_message": "",
+        "bot_last_response": "",
+        "second_to_last_interaction": "",
+        "third_to_last_interaction": "",
+        "recent_classifications": []
+    })
+
+def reset_short_term_memory(conversation_id):
+    """Resets short-term memory when a tool is used."""
+    if conversation_id in short_term_memory:
+        short_term_memory[conversation_id] = {
+            "user_last_message": "",
+            "bot_last_response": "",
+            "second_to_last_interaction": "",
+            "third_to_last_interaction": "",
+            "recent_classifications": []
+        }
+
+def clear_short_term_memory(conversation_id):
+    """Completely remove short-term memory for a conversation."""
+    short_term_memory.pop(conversation_id, None)
+
+
+
+================================================================================
+FILE: utils/llm_config.py
+================================================================================
+
+import os
+from enum import Enum
+from dotenv import load_dotenv
+
+load_dotenv()
+
+
+class LLMProvider(str, Enum):
+    OPENAI   = "openai"
+    DEEPSEEK = "deepseek"
+
+# valores globales
+GLOBAL_PROVIDER   = os.getenv("LLM_PROVIDER", "openai")
+GLOBAL_OPENAI    = os.getenv("OPENAI_MODEL", "gpt-4o")
+GLOBAL_DEEPSEEK  = os.getenv("DEEPSEEK_MODEL", "deepseek-chat")
+GLOBAL_KEY_OPENAI   = os.getenv("OPENAI_API_KEY")
+GLOBAL_KEY_DEEPSEEK = os.getenv("DEEPSEEK_API_KEY")
+
+def _pick_env(varname: str) -> str | None:
+    v = os.getenv(varname)
+    return v.strip() if v and v.strip() else None
+
+def get_llm_config(tool: str | None = None):
+    """
+    1) Mira si hay override de proveedor para la herramienta (e.g. CLASSIFIER_LLM_PROVIDER).
+    2) Si existe, lo usa; si no, cae al global.
+    3) Igual para modelo y api_key.
+    """
+    # construye nombres de variable en UPPER
+    t = tool.upper() if tool else ""
+    # override de proveedor: e.g. CLASSIFIER_LLM_PROVIDER
+    override_provider = _pick_env(f"{t}_LLM_PROVIDER")
+    provider = LLMProvider(override_provider) if override_provider else LLMProvider(GLOBAL_PROVIDER)
+
+    # override de modelo según proveedor
+    if provider == LLMProvider.OPENAI:
+        model = _pick_env(f"{t}_OPENAI_MODEL") or GLOBAL_OPENAI
+        api_key = _pick_env(f"{t}_OPENAI_API_KEY") or GLOBAL_KEY_OPENAI
+        base_url = "https://api.openai.com/v1"
+    else:
+        model = _pick_env(f"{t}_DEEPSEEK_MODEL") or GLOBAL_DEEPSEEK
+        api_key = _pick_env(f"{t}_DEEPSEEK_API_KEY") or GLOBAL_KEY_DEEPSEEK
+        base_url = "https://api.deepseek.com/v1"
+
+    return {
+        "provider": provider,
+        "model":    model,
+        "api_key":  api_key,
+        "base_url": base_url
+    }
+
+
+
+================================================================================
+FILE: utils/llm_provider.py
+================================================================================
+
+import httpx, json, openai
+from utils.llm_config import get_llm_config
+
+# utils/llm_client.py
+def _clean_params(params: dict):
+    params.pop("tool", None)            # <- quita basura
+    return params
+
+async def chat_completion(messages, *, tool=None, **params):
+    """
+    Hace una llamada al proveedor configurado.
+    Uso: await chat_completion(msgs, temperature=0.3, max_tokens=1000)
+    Devuelve el dict JSON completo de la respuesta.
+    """
+    cfg = get_llm_config(tool)
+
+    # Normaliza kwargs
+    body = {
+        "model":      cfg["model"],
+        "messages":   messages,
+        **params
+    }
+
+    # OPENAI: usa sdk porque da manejo automático de reintentos y streaming
+    if cfg["provider"].value == "openai":
+        client = openai.OpenAI(api_key=cfg["api_key"], base_url=cfg["base_url"])
+        resp   = client.chat.completions.create(**body)
+        return resp.model_dump()
+
+    # Otros proveedores (DeepSeek / Anthropic) con API “tipo‑OpenAI”
+    headers = {
+        "Authorization": f"Bearer {cfg['api_key']}",
+        "Content-Type":  "application/json"
+    }
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        r = await client.post(f"{cfg['base_url']}/chat/completions",
+                              headers=headers, json=body)
+        r.raise_for_status()
+        return r.json()
+
+
+
+================================================================================
+FILE: utils/tool_registry.py
+================================================================================
+
+# utils/tool_registry.py
+
+TOOL_ROUTER = {}
+
+def register_tool(name):
+    def wrapper(fn):
+        TOOL_ROUTER[name] = fn
+        return fn
+    return wrapper
+
+def get_tool_by_classification(classification):
+    return TOOL_ROUTER.get(classification)
+
+
+
+================================================================================
+FILE: utils/tool_response.py
+================================================================================
+
+from typing import Optional, Literal, List
+from pydantic import BaseModel
+
+class ToolResponse(BaseModel):
+    classification: Literal[
+        "Consulta de Tickets",
+        "Búsqueda de Query",
+        "ISO",
+        "Pregunta Respondida",
+        "Búsqueda Semántica",
+        "Pregunta Continuada",
+        "Comparar ticket",    
+        "No Relacionado",
+        "Clasificación Incierta",
+        "Error"
+    ]
+
+    response: str
+    error: Optional[str] = None
+
+    # Campos opcionales útiles para herramientas específicas
+    ticket_ids: Optional[List[str]] = None
+    etiquetas: Optional[List[str]] = None
+    results: Optional[List[dict]] = None
+    metadata: Optional[dict] = None
+
+def make_error_response(message: str) -> ToolResponse:
+    return ToolResponse(
+        classification="Error",
+        response=message,
+        error=message,
+        ticket_ids=[],
+        etiquetas=[],
+        results=[]
+    )
+
+
+
+
+================================================================================
+FILE: utils/prompt_loader.py
+================================================================================
+
+import os
+import re
+import logging
+
+def load_latest_prompt(tool_folder: str,
+                       base_pattern: str,
+                       with_filename: bool = False):
+    """
+    Busca en Prompts/{tool_folder} el archivo {base_pattern}_vN.txt de mayor N.
+    Si `with_filename=True` devuelve (contenido, nombre_de_archivo),
+    de lo contrario solo el contenido.
+    """
+    folder_path = os.path.join("Prompts", tool_folder)
+    if not os.path.isdir(folder_path):
+        logging.error(f"❌ Carpeta no existe: {folder_path}")
+        if with_filename:
+            return None, "N/A"
+        return None
+
+    # Regex para capturar la versión después de _v
+    rgx = re.compile(rf"^{base_pattern}_v(\d+)\.txt$", re.IGNORECASE)
+    candidates = []
+    for fname in os.listdir(folder_path):
+        m = rgx.match(fname)
+        if m:
+            version = int(m.group(1))
+            candidates.append((version, fname))
+
+    if not candidates:
+        logging.error(f"⚠️ No hay prompts que cumplan patrón en {folder_path}")
+        if with_filename:
+            return None, "N/A"
+        return None
+
+    # Elige el mayor
+    _, latest_file = max(candidates, key=lambda x: x[0])
+    path = os.path.join(folder_path, latest_file)
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            content = f.read()
+    except Exception as e:
+        logging.error(f"❌ Error leyendo prompt {path}: {e}")
+        if with_filename:
+            return None, latest_file
+        return None
+
+    if with_filename:
+        return content, latest_file
+    return content
+
+
+
+================================================================================
+FILE: test_api.py (NOT FOUND)
+================================================================================
+
+
+================================================================================
+FILE: logadmin.py
+================================================================================
+
+import pandas as pd
+import os
+import re
+from datetime import datetime
+import csv
+
+# Paths relativos
+CONV_LOG_PATH = "logs/conversation_log.csv"
+OPENAI_LOG_PATH = "logs/openai_calls.csv"
+OUTPUT_DIR = "logs/indicadores"
+
+# Costo por 1000 tokens de GPT-4o-mini
+COSTO_PROMPT = 0.0005
+COSTO_COMPLETION = 0.0015
+
+# Crear carpeta si no existe
+os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Función para agregar fila TOTAL
+# ─────────────────────────────────────────────────────────────────────────────
+def add_summary_row(csv_file_path, columns_to_sum, label_col, label_value="TOTAL"):
+    """
+    Lee el csv, suma las columnas numéricas indicadas en 'columns_to_sum',
+    elimina cualquier fila anterior que tuviera 'label_value' en 'label_col',
+    agrega una nueva fila con esa misma etiqueta y con los totales.
+    """
+    if not os.path.isfile(csv_file_path):
+        print(f"No existe el archivo {csv_file_path}, no se pudo agregar fila TOTAL.")
+        return
+
+    # Cargamos todo el CSV en memoria
+    with open(csv_file_path, "r", newline="", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        fieldnames = reader.fieldnames
+        rows = list(reader)
+
+    # Sumar las columnas de interés
+    sums = {col: 0.0 for col in columns_to_sum}
+    cleaned_rows = []
+
+    for row in rows:
+        # Si ya existiera una fila con label_value, la saltamos
+        if row.get(label_col, "") == label_value:
+            continue
+
+        cleaned_rows.append(row)
+        # Intentamos sumar las columnas que nos interesan
+        for col in columns_to_sum:
+            try:
+                sums[col] += float(row[col])
+            except (ValueError, KeyError):
+                pass
+
+    # Construimos la fila final con los totales
+    total_row = {fn: "" for fn in fieldnames}  # fila "vacía"
+    # Etiqueta en la columna que definimos
+    if label_col in total_row:
+        total_row[label_col] = label_value
+
+    # Ponemos cada suma en su columna
+    for col in columns_to_sum:
+        if col in total_row:
+            total_row[col] = str(sums[col])
+
+    # Reescribir el CSV
+    with open(csv_file_path, "w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer.writeheader()
+        for row in cleaned_rows:
+            writer.writerow(row)
+        writer.writerow(total_row)
+
+
+# ───────────────────────────────
+# Procesar conversation_log
+# ───────────────────────────────
+df_conv = pd.read_csv(CONV_LOG_PATH, parse_dates=["timestamp"])
+df_conv["date"] = df_conv["timestamp"].dt.date
+
+# Conversaciones únicas por día: (date, conversation_id)
+conv_por_dia = df_conv.groupby("date")["conversation_id"].nunique().reset_index()
+conv_por_dia.columns = ["fecha", "conversaciones_unicas"]
+
+# ───────────────────────────────
+# Procesar openai_calls
+# ───────────────────────────────
+df_openai = pd.read_csv(OPENAI_LOG_PATH, parse_dates=["timestamp"])
+
+# Extraer tokens del texto
+def extract_token_value(text, token_type):
+    match = re.search(fr"{token_type}=(\d+)", str(text))
+    return int(match.group(1)) if match else 0
+
+df_openai["prompt_tokens"] = df_openai["token_usage"].apply(lambda x: extract_token_value(x, "prompt_tokens"))
+df_openai["completion_tokens"] = df_openai["token_usage"].apply(lambda x: extract_token_value(x, "completion_tokens"))
+df_openai["total_tokens"] = df_openai["prompt_tokens"] + df_openai["completion_tokens"]
+df_openai["costo_usd"] = (
+    df_openai["prompt_tokens"] / 1000 * COSTO_PROMPT +
+    df_openai["completion_tokens"] / 1000 * COSTO_COMPLETION
+)
+df_openai["fecha"] = df_openai["timestamp"].dt.date
+
+# ───────────────────────────────
+# Indicadores por día
+# ───────────────────────────────
+llamados_por_dia = df_openai.groupby("fecha").size().reset_index(name="llamados_openai")
+tokens_por_dia = df_openai.groupby("fecha")[["total_tokens", "costo_usd"]].sum().reset_index()
+
+indicadores_dia = conv_por_dia \
+    .merge(llamados_por_dia, on="fecha", how="outer") \
+    .merge(tokens_por_dia, on="fecha", how="outer") \
+    .fillna(0)
+
+# Ajustar tipos
+indicadores_dia["conversaciones_unicas"] = indicadores_dia["conversaciones_unicas"].astype(int)
+indicadores_dia["llamados_openai"] = indicadores_dia["llamados_openai"].astype(int)
+
+# Reordenar
+indicadores_dia = indicadores_dia[["fecha", "conversaciones_unicas", "llamados_openai", "total_tokens", "costo_usd"]]
+
+# ───────────────────────────────
+# Indicadores por conversación
+# ───────────────────────────────
+tokens_conversacion = df_openai.groupby(["fecha", "conversation_id"])[["total_tokens", "costo_usd"]].sum().reset_index()
+llamados_conversacion = df_openai.groupby("conversation_id").size().reset_index(name="llamados_openai")
+
+indicadores_conversacion = tokens_conversacion.merge(llamados_conversacion, on="conversation_id")
+indicadores_conversacion = indicadores_conversacion[["fecha", "conversation_id", "total_tokens", "costo_usd", "llamados_openai"]]
+
+# ───────────────────────────────
+# Guardar archivos
+# ───────────────────────────────
+os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+path_dia = f"{OUTPUT_DIR}/indicadores_por_dia.csv"
+path_conv = f"{OUTPUT_DIR}/indicadores_por_conversacion.csv"
+
+indicadores_dia.to_csv(path_dia, index=False)
+indicadores_conversacion.to_csv(path_conv, index=False)
+
+# ───────────────────────────────
+# Agregar fila TOTAL
+# ───────────────────────────────
+add_summary_row(
+    csv_file_path=path_dia,
+    columns_to_sum=["llamados_openai", "total_tokens", "costo_usd"],
+    label_col="fecha",    # Etiqueta en la columna 'fecha'
+    label_value="TOTAL"
+)
+
+add_summary_row(
+    csv_file_path=path_conv,
+    columns_to_sum=["llamados_openai", "total_tokens", "costo_usd"],
+    label_col="conversation_id",  # Etiqueta en la columna 'conversation_id'
+    label_value="TOTAL"
+)
+
+print("✅ Indicadores generados en logs/indicadores/")
+
+
+

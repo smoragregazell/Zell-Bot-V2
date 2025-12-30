@@ -1,0 +1,80 @@
+
+import os
+from datetime import datetime
+
+def read_file_content(file_path):
+    """Read the content of a file safely."""
+    try:
+        with open(file_path, 'r', encoding='utf-8') as file:
+            return file.read()
+    except Exception as e:
+        return f"Error reading file {file_path}: {str(e)}"
+
+def export_codebase():
+    """Export important project files to a single text document."""
+    # Define the files to export based on current structure
+    files_to_export = [
+        # Core files
+        "main.py",
+        # Endpoints
+        "endpoints/classifier.py",
+        # Tools
+        "Tools/continuation_tool.py",
+        "Tools/iso_tool.py",
+        "Tools/query_tool.py",
+        "Tools/semantic_tool.py",
+        "Tools/semantic_followup_tool.py",
+        "Tools/ticket_tool.py",
+        # Prompts
+        "Prompts/Clasificator_prompt.txt",
+        "Prompts/Ticket_prompt.txt",
+        "Prompts/continuation_prompt.txt",
+        "Prompts/conversationsummary_prompt.txt",
+        "Prompts/iso_prompt.txt",
+        "Prompts/queryAnalysis_prompt.txt",
+        "Prompts/query_prompt.txt",
+        # Utilities
+        "utils/logs.py",
+        "utils/contextManager/context_handler.py",
+        "utils/contextManager/short_term_memory.py"
+    ]
+    
+    # Create exports directory if it doesn't exist
+    os.makedirs("exports", exist_ok=True)
+    
+    # Generate timestamp for the filename
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    output_file = f"exports/codebase_export_{timestamp}.txt"
+    
+    # Create the export file
+    with open(output_file, 'w', encoding='utf-8') as export:
+        # Write header with project info
+        export.write(f"===== CODEBASE EXPORT =====\n")
+        export.write(f"Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+        export.write(f"Total files: {len(files_to_export)}\n\n")
+        
+        # Process each file
+        for file_path in files_to_export:
+            if os.path.exists(file_path):
+                # Write file header
+                export.write(f"\n{'=' * 80}\n")
+                export.write(f"FILE: {file_path}\n")
+                export.write(f"{'=' * 80}\n\n")
+                
+                # Write file content
+                content = read_file_content(file_path)
+                export.write(content)
+                export.write("\n\n")
+            else:
+                export.write(f"\n{'=' * 80}\n")
+                export.write(f"FILE: {file_path} (NOT FOUND)\n")
+                export.write(f"{'=' * 80}\n\n")
+    
+    return output_file
+
+if __name__ == "__main__":
+    try:
+        export_path = export_codebase()
+        print(f"✅ Export completed! File saved to: {export_path}")
+    except Exception as e:
+        print(f"❌ Error during export: {str(e)}")

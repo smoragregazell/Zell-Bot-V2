@@ -1,0 +1,99 @@
+GOAL
+Convert all tool routing in classifier.py to use the dynamic registry system, while preserving the toggle between search_combined (hybrid) and semantic_tool (vector-only).
+
+📦 TOOL FILES TO MODIFY
+In each tool file, you will:
+
+Import the register_tool decorator
+
+Decorate the main tool function using the EXACT classification string returned by the classifier prompt
+
+🔧 1. ticket_tool.py
+python
+Copy
+Edit
+from utils.tool_registry import register_tool
+
+@register_tool("Consulta de Tickets")
+def execute_ticket_query_tool(inputs, conversation_id, interaction_id=None):
+🔧 2. query_tool.py
+python
+Copy
+Edit
+from utils.tool_registry import register_tool
+
+@register_tool("Búsqueda de Query")
+def execute_ticket_query_tool(inputs, conversation_id, interaction_id=None):
+🔧 3. search_combined.py (this is the hybrid search tool)
+python
+Copy
+Edit
+from utils.tool_registry import register_tool
+
+@register_tool("Búsqueda Semántica (Hybrid)")
+def execute_combined_ticket_search(inputs, conversation_id, interaction_id=None):
+🔧 4. semantic_tool.py (this is the vector-only fallback)
+python
+Copy
+Edit
+from utils.tool_registry import register_tool
+
+@register_tool("Búsqueda Semántica (Vector)")
+def execute_semantic_search(inputs, conversation_id, interaction_id=None):
+🔧 5. iso_tool.py
+python
+Copy
+Edit
+from utils.tool_registry import register_tool
+
+@register_tool("ISO")
+def iso_tool(inputs, conversation_id, interaction_id=None):
+🔧 6. continuation_tool.py
+python
+Copy
+Edit
+from utils.tool_registry import register_tool
+
+@register_tool("Pregunta Continuada")
+def semantic_followup_tool(inputs, conversation_id, interaction_id=None):
+🧠 classifier.py MODIFICATIONS
+🥇 1. Add these imports:
+python
+Copy
+Edit
+from utils.tool_registry import get_tool_by_classification
+from utils.tool_response import make_error_response
+🥈 2. Add this semantic toggle near the top:
+python
+Copy
+Edit
+USE_HYBRID_SEARCH = os.getenv("USE_HYBRID_SEARCH", "true").lower() == "true"
+🥉 3. Replace this giant if classification == ... block:
+🔥 Instead of manually calling tools with import/if blocks…
+
+Replace the tool execution logic with:
+
+python
+Copy
+Edit
+# 🔁 Determine tool name
+tool_key = classification
+
+# 🧠 Handle semantic toggle
+if classification == "Búsqueda Semántica":
+    tool_key = "Búsqueda Semántica (Hybrid)" if USE_HYBRID_SEARCH else "Búsqueda Semántica (Vector)"
+
+# 🔎 Lookup the tool function
+tool_fn = get_tool_by_classification(tool_key)
+
+if not tool_fn:
+    return make_error_response(f"No se encontró herramienta para: {tool_key}")
+
+# 🚀 Run the tool (await if coroutine)
+if callable(tool_fn):
+    if hasattr(tool_fn, "__call__") and tool_fn.__code__.co_flags & 0x80:  # async check
+        tool_response = await tool_fn(inputs, conversation_id, interaction_id)
+    else:
+        tool_response = tool_fn(inputs, conversation_id, interaction_id)
+else:
+    return make_error_response("La herramienta encontrada no es ejecutable.")

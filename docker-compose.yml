@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  zell-bot:
+    build: .
+    image: zell-bot:latest
+    ports:
+      - "5050:5050"
+    env_file:
+      - .env
+    volumes:
+      # Mount logs directory for persistence
+      - ./logs:/app/logs
+      # Mount data directory for FAISS index and embeddings
+      - ./Data:/app/Data
+      # Mount knowledge base for document access
+      - ./knowledgebase:/app/knowledgebase
+      # Mount prompts directory
+      - ./Prompts:/app/Prompts
+    environment:
+      - PORT=5050
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5050/')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s

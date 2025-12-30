@@ -1,0 +1,17 @@
+tipo,token,user_email,timestamp_utc,estado,motivo
+validación,DEV-TOKEN,-,2025-07-09T18:17:18.186256,rechazado,Token no encontrado
+validación,DEV-TOKEN,-,2025-07-09T18:17:35.085517,rechazado,Token no encontrado
+validación,DEV-TOKEN,-,2025-07-09T18:18:18.341290,rechazado,Token no encontrado
+validación,DEV-TOKEN,-,2025-07-09T18:18:49.023749,rechazado,Token no encontrado
+validación,DEV-TOKEN,-,2025-07-09T18:18:59.987725,rechazado,Token no encontrado
+validación,DEV-TOKEN,-,2025-07-09T18:19:19.923311,rechazado,Token no encontrado
+validación,DEV-TOKEN,-,2025-07-09T18:20:06.181830,rechazado,Token no encontrado
+validación,DEV-TOKEN,-,2025-07-09T18:20:42.875974,rechazado,Token no encontrado
+validación,DEV-TOKEN,-,2025-07-09T18:21:20.720856,rechazado,Token no encontrado
+validación,DEV-TOKEN,-,2025-07-09T18:27:47.884686,rechazado,Token no encontrado
+validación,DEV-TOKEN,-,2025-07-09T18:28:16.267739,rechazado,Token no encontrado
+validación,DEV-TOKEN,-,2025-08-07T23:44:53.812782,rechazado,Token no encontrado
+validación,DEV-TOKEN,-,2025-08-07T23:45:42.256296,rechazado,Token no encontrado
+validación,DEV-TOKEN,-,2025-08-07T23:47:01.924555,rechazado,Token no encontrado
+validación,DEV-TOKEN,-,2025-08-07T23:47:04.763925,rechazado,Token no encontrado
+validación,test-token,-,2025-09-18T19:09:22.221997,rechazado,Token no encontrado

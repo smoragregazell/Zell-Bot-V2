@@ -1,0 +1,73 @@
+~/workspace$ python test_api.py
+
+Enter your message (or 'exit' to quit): hola
+
+Sending request...
+Using conversation_id: None
+
+Response:
+{
+  "conversation_id": "conv_20250408_06c7dbf9",
+  "interaction_id": 1,
+  "response": "¡Gracias hola! ¿En qué puedo ayudarte hoy?"
+}
+
+Received conversation_id: conv_20250408_06c7dbf9
+
+Enter your message (or 'exit' to quit): I am ataching the current version of the code with your latest suggestions. Now i need a testing tool that runs the app, ask a series of predeterimned questions and records the awnsers, identifies if its a regular awnser, a mistake, if it got confused, it records wnser time. 
+And it repeats x number of times, maybe 5. 
+A standarized test that can be graded, and that i can run so i dont have to make validations, and to have an objective continuos way of checking everyrelease for at least the basic behaviors. 
+
+Tell me what you think of my aproach, suggestions and implementation plan. Check the code i send you so your awnser is more than just jibbrer jabber
+Sending request...
+Using conversation_id: conv_20250408_06c7dbf9
+
+Response:
+{
+  "conversation_id": "conv_20250408_06c7dbf9",
+  "interaction_id": 2,
+  "response": "Lo siento, no te puedo ayudar con eso. ¿Hay algo más en lo que pueda asistirte relacionado con tickets, información o normativas ISO?"
+}
+
+Received conversation_id: conv_20250408_06c7dbf9
+
+Enter your message (or 'exit' to quit): 
+Sending request...
+Using conversation_id: conv_20250408_06c7dbf9
+
+Response:
+{
+  "conversation_id": "conv_20250408_06c7dbf9",
+  "interaction_id": 3,
+  "response": "No entiendo a qué te refieres. ¿Podrías proporcionar más contexto?"
+}
+
+Received conversation_id: conv_20250408_06c7dbf9
+
+Enter your message (or 'exit' to quit): 
+Sending request...
+Using conversation_id: conv_20250408_06c7dbf9
+
+Response:
+{
+  "conversation_id": "conv_20250408_06c7dbf9",
+  "interaction_id": 4,
+  "response": "No entiendo a qué te refieres. ¿Podrías proporcionar más contexto?"
+}
+
+Received conversation_id: conv_20250408_06c7dbf9
+
+Enter your message (or 'exit' to quit): 
+Sending request...
+Using conversation_id: conv_20250408_06c7dbf9
+
+Response:
+{
+  "conversation_id": "conv_20250408_06c7dbf9",
+  "interaction_id": 5,
+  "response": "Could you provide more details or specify the context of your inquiry? Are you looking for information on a specific test, or do you have a particular aspect you need help with?"
+}
+
+Received conversation_id: conv_20250408_06c7dbf9
+
+Enter your message (or 'exit' to quit): 
