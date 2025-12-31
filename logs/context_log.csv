@@ -33,3 +33,7 @@ conv_20250807_5b6462e0,5,SetUserInfo,"{""user_info"": ""SANTIAGOTEST""}",2025-08
 conv_20250807_5b6462e0,6,SetUserInfo,"{""user_info"": ""SANTIAGOTEST""}",2025-08-07 17:47:04
 conv_20250918_d6641538,,Initialized,"{""active_tool"": null, ""history"": [], ""interaction_id"": 0, ""last_activity"": 1758222562.2343268}",2025-09-18 13:09:22
 conv_20250918_d6641538,1,SetUserInfo,"{""user_info"": ""testuser""}",2025-09-18 13:09:22
+test1,,Initialized,"{""active_tool"": null, ""history"": [], ""interaction_id"": 0, ""last_activity"": 1767116233.1349888}",2025-12-30 11:37:13
+test1,,Initialized,"{""active_tool"": null, ""history"": [], ""interaction_id"": 0, ""last_activity"": 1767116983.2139068}",2025-12-30 11:49:43
+test1,,Initialized,"{""active_tool"": null, ""history"": [], ""interaction_id"": 0, ""last_activity"": 1767117969.3436239}",2025-12-30 12:06:09
+test1,,Initialized,"{""active_tool"": null, ""history"": [], ""interaction_id"": 0, ""last_activity"": 1767118347.1147072}",2025-12-30 12:12:27

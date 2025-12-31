@@ -1,0 +1,63 @@
+Aquí va el resumen incluyendo **Responses API** y cómo lo estamos usando.
+
+## Resumen de lo trabajado hoy (V2)
+
+### 1) Qué construimos en V2
+
+* Montamos un **chat_v2** que funciona como “orquestador”: recibe la pregunta, y en vez de resolver todo con un clasificador gigante, deja que el modelo **decida qué tools llamar** y en qué orden.
+* Probamos el flujo local levantando el server con `python main.py` (te corre Uvicorn y expone endpoints).
+
+### 2) Cómo estamos usando **Responses API**
+
+La idea es esta:
+
+1. En `chat_v2.py` haces un `client.responses.create(...)` con:
+
+   * `model` (el que elijas)
+   * `input` con el mensaje del usuario (y si aplica historial)
+   * `tools` (la lista/definición de tools disponibles: search_knowledge, get_item, search_docs, etc.)
+
+2. El modelo responde con una de dos cosas:
+
+   * **Respuesta final** (texto al usuario)
+   * o **tool_calls** (pide ejecutar una tool con argumentos)
+
+3. Si salen `tool_calls`, tu backend:
+
+   * ejecuta cada tool (FAISS, SQL LIKE, traer ticket, etc.)
+   * agrega el resultado como “tool output”
+   * vuelve a llamar `client.responses.create(...)` pasando el `previous_response_id` para que el modelo continúe el razonamiento con ese nuevo contexto
+
+4. Repites ese loop hasta que el modelo ya entregue un **final output**.
+
+✅ Esto te da multi-step natural:
+
+* primero “busca”
+* luego “abre detalles”
+* luego “sintetiza”
+  sin meter toda la responsabilidad en un clasificador.
+
+### 3) Evidencia de que el loop ya está funcionando
+
+En tu traza del ejemplo “CLABE no se refleja en WS”, se vio algo así:
+
+* Round 1: el modelo pidió `search_knowledge` (FAISS semántico)
+* Round 2–4: el modelo pidió `get_item` para 3 tickets
+* Round 5: el modelo devolvió la respuesta final
+
+En ese caso, fueron **5 llamadas a Responses API** (una por round).
+*(Y si tu `search_knowledge` genera embedding del query con OpenAI, eso sería aparte como llamada de embeddings; depende de tu implementación.)*
+
+### 4) Problema que salió y se corrigió
+
+* Te pegó un error 400 de OpenAI: `Unknown parameter: input[1].status`
+* Eso fue por mandar un campo que **Responses API no acepta** dentro de `input`.
+* Lo ajustaste y luego ya pudiste hacer request por `curl` y recibir respuesta.
+
+### 5) A dónde vamos ahora (RAG para documentos)
+
+* Tickets ya está jalando bien con FAISS + tools.
+* Siguiente paso: replicar el mismo patrón para **docs** (ISO/políticas, minutas, manuales, catálogo de errores).
+* Estrategia: **indexado offline** por universos (chunks + metadata + FAISS) y en runtime una tool `search_docs(universe, query, top_k)` que se comporte igual que `search_knowledge` de tickets.
+
+Si quieres, el siguiente entregable lo hacemos súper concreto: te pongo el “mini-diagrama” del loop de Responses API con tus tools actuales y dónde entra cada uno.

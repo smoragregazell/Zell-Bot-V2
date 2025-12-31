@@ -16,6 +16,7 @@ from Tools.continuation_tool import router as continuation_router
 import Tools.compararticket_tool
 from endpoints.session_token import router as session_router
 from endpoints.logsdownload import router as logs_router
+from endpoints.chat_v2 import router as chat_v2_router
 
 
 
@@ -75,6 +76,7 @@ app.include_router(iso_router)
 app.include_router(continuation_router)
 app.include_router(session_router)
 app.include_router(logs_router)
+app.include_router(chat_v2_router)
 
 from Tools.compararticket_tool import router as compare_router
 app.include_router(compare_router)

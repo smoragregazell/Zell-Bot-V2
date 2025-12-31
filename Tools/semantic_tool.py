@@ -16,10 +16,17 @@ from utils.tool_registry import register_tool
 from utils.debug_logger import log_debug_event
 from utils.contextManager.context_handler import add_to_context
 from utils.prompt_loader import load_latest_prompt
-
+from dotenv import load_dotenv
+load_dotenv()
 
 # === Config ===
-OPENAI_API_KEY_SEMANTIC = os.getenv("OPENAI_API_KEY_Semantic")
+OPENAI_API_KEY_SEMANTIC = (
+    os.getenv("OPENAI_API_KEY_Semantic")
+    or os.getenv("OPENAI_API_KEY_SEMANTIC")  # por si un día lo cambias a mayúsculas
+    or os.getenv("OPENAI_API_KEY_V2")
+    or os.getenv("OPENAI_API_KEY")
+    or os.getenv("OPENAI_API_KEY_Clasificador")
+)
 FAISS_INDEX_PATH = "Data/faiss_index_ip.bin"
 FAISS_IDS_PATH = "Data/faiss_ids.npy"
 

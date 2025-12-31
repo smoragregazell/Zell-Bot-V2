@@ -6675,9 +6675,6 @@
         ]
       },
       "patterns": [
-        {
-          "pattern-regex": "(https?:\\/\\/)?hooks.slack.com\\/(services|workflows)\\/[A-Za-z0-9+\\/]{43,46}"
-        }
       ],
       "severity": "INFO"
     },
@@ -9011,16 +9008,7 @@
           "secrets",
           "slack"
         ]
-      },
-      "patterns": [
-        {
-          "pattern-regex": "https://hooks\\.slack\\.com/services/T[a-zA-Z0-9_]{8,10}/B[a-zA-Z0-9_]{8,10}/[a-zA-Z0-9_]{24}"
-        },
-        {
-          "pattern-not": "https://hooks.slack.com/services/REDACTED/REDACTED/REDACTED"
-        }
-      ],
-      "severity": "ERROR"
+      }
     },
     {
       "id": "vendored-rules.generic.secrets.security.detected-snyk-api-key",
