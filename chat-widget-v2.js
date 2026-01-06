@@ -6,7 +6,10 @@
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxuZWx3cmptaGdnbmRva2tqZGVzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDkwODA2NTksImV4cCI6MjA2NDY1NjY1OX0.laY_1H7SeopDU-6fmTucO6ALZMyadYwP_S4EIQqkJ9E';
     
     // Configuración del backend
-    const BACKEND_URL = 'https://iaticketsv4.replit.app'; // Ajusta según tu backend
+    // Prioridad: 1) Variable global, 2) Valor por defecto
+    const BACKEND_URL = (typeof window !== 'undefined' && window.BACKEND_URL) 
+        ? window.BACKEND_URL 
+        : 'http://localhost:5050'; // Ajusta según tu backend
     const CHAT_V2_ENDPOINT = `${BACKEND_URL}/chat_v2`;
   
     // Capturamos el email expuesto por el host

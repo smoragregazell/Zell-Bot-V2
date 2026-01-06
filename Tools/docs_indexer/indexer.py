@@ -8,7 +8,7 @@
 
 import os
 import json
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Set
 
 import numpy as np
 import faiss
@@ -30,6 +30,13 @@ from .embeddings import (
     load_emb_cache,
     embed_text_cached,
     get_emb_cache_path
+)
+from .file_cache import (
+    load_file_cache,
+    save_file_cache,
+    get_unprocessed_files,
+    mark_file_processed,
+    get_file_cache_path
 )
 
 
@@ -54,6 +61,9 @@ def build_docs_index(
 
     # Cache de embeddings
     emb_cache = load_emb_cache(out_dir, universe)
+    
+    # Cache de archivos procesados
+    file_cache = load_file_cache(out_dir, universe)
 
     # 1) Descubrir archivos
     files: List[str] = []
@@ -74,12 +84,54 @@ def build_docs_index(
 
     if not files:
         return {"ok": False, "error": f"No encontré archivos {SUPPORTED_EXTS} en {input_dir}"}
+    
+    # Filtrar archivos ya procesados (solo procesar nuevos/modificados)
+    files_to_process = get_unprocessed_files(files, file_cache, use_relative_path=True)
+    skipped_files = len(files) - len(files_to_process)
+    
+    if not files_to_process:
+        return {
+            "ok": True,
+            "universe": universe,
+            "input_dir": input_dir,
+            "files": len(files),
+            "skipped": skipped_files,
+            "message": "Todos los archivos ya están procesados. No hay cambios.",
+            "index_path": os.path.join(out_dir, f"docs_{universe}.index"),
+            "meta_path": os.path.join(out_dir, f"docs_{universe}_meta.jsonl"),
+        }
 
-    # 2) Crear chunks
+    # Cargar índice FAISS existente si existe (para actualización incremental)
+    idx_path = os.path.join(out_dir, f"docs_{universe}.index")
+    meta_path = os.path.join(out_dir, f"docs_{universe}_meta.jsonl")
+    existing_index = None
+    existing_meta: List[DocChunk] = []
+    existing_chunk_ids: Set[str] = set()
+    
+    if os.path.exists(idx_path) and os.path.exists(meta_path):
+        try:
+            existing_index = faiss.read_index(idx_path)
+            # Cargar metadatos existentes para evitar duplicados
+            with open(meta_path, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        data = json.loads(line)
+                        existing_chunk_ids.add(data.get("chunk_id", ""))
+                    except Exception:
+                        continue
+        except Exception as e:
+            # Si hay error cargando el índice existente, empezamos de cero
+            existing_index = None
+            existing_chunk_ids = set()
+
+    # 2) Crear chunks solo para archivos nuevos/modificados
     chunks: List[DocChunk] = []
     matched_catalog_docs = 0
 
-    for path in files:
+    for path in files_to_process:
         title = os.path.basename(path)
         sha = file_sha256(path)
         doc_id = sha[:12]  # estable por contenido
@@ -214,6 +266,19 @@ def build_docs_index(
             token_cursor += sub_chunks[-1][2]
 
     if not chunks:
+        # Si no hay chunks nuevos pero hay archivos procesados, retornar info del índice existente
+        if existing_index is not None:
+            return {
+                "ok": True,
+                "universe": universe,
+                "input_dir": input_dir,
+                "files": len(files),
+                "skipped": skipped_files,
+                "new_files": 0,
+                "message": "No se generaron chunks nuevos de los archivos modificados (pueden estar vacíos o fallar extracción). Índice existente se mantiene.",
+                "index_path": idx_path,
+                "meta_path": meta_path,
+            }
         return {"ok": False, "error": "No se generaron chunks (docs vacíos o extracción falló)"}
 
     # 3) Embeddings por chunk (con cache)
@@ -240,16 +305,29 @@ def build_docs_index(
     dim = mat.shape[1]
 
     # 4) Índice FAISS (IP sobre vectores normalizados ~= cosine)
-    index = faiss.IndexFlatIP(dim)
-    index.add(mat)
+    # Si hay índice existente, agregar a él; si no, crear uno nuevo
+    if existing_index is not None:
+        if existing_index.d != dim:
+            # Dimensiones no coinciden, crear nuevo índice
+            index = faiss.IndexFlatIP(dim)
+            # Cargar vectores existentes del índice anterior (no podemos recuperarlos fácilmente)
+            # Por ahora, si las dimensiones no coinciden, empezamos de cero
+            index.add(mat)
+        else:
+            # Agregar nuevos vectores al índice existente
+            index = existing_index
+            index.add(mat)
+    else:
+        # Crear nuevo índice
+        index = faiss.IndexFlatIP(dim)
+        index.add(mat)
 
     # 5) Persistir
-    idx_path = os.path.join(out_dir, f"docs_{universe}.index")
-    meta_path = os.path.join(out_dir, f"docs_{universe}_meta.jsonl")
-
     faiss.write_index(index, idx_path)
 
-    with open(meta_path, "w", encoding="utf-8") as f:
+    # Guardar metadatos: append si hay existentes, write si es nuevo
+    mode = "a" if existing_index is not None and os.path.exists(meta_path) else "w"
+    with open(meta_path, mode, encoding="utf-8") as f:
         for c in meta_rows:
             f.write(json.dumps({
                 "chunk_id": c.chunk_id,
@@ -286,7 +364,42 @@ def build_docs_index(
                 "catalog_title": c.catalog_title,
             }, ensure_ascii=False) + "\n")
 
-    unique_docs = len(set([c.doc_id for c in meta_rows]))
+    # Marcar archivos como procesados en el caché
+    for path in files_to_process:
+        try:
+            sha = file_sha256(path)
+            mark_file_processed(path, sha, file_cache, use_relative_path=True)
+        except Exception:
+            pass
+    
+    # Guardar caché de archivos actualizado
+    save_file_cache(out_dir, universe, file_cache)
+    
+    # Calcular estadísticas
+    # Para docs únicos, contar los nuevos + los existentes
+    new_doc_ids = set([c.doc_id for c in meta_rows])
+    if existing_index is not None:
+        # Leer todos los doc_ids del meta existente para contar total
+        all_doc_ids = new_doc_ids.copy()
+        try:
+            with open(meta_path, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        data = json.loads(line)
+                        doc_id = data.get("doc_id")
+                        if doc_id:
+                            all_doc_ids.add(doc_id)
+                    except Exception:
+                        continue
+        except Exception:
+            pass
+        unique_docs = len(all_doc_ids)
+    else:
+        unique_docs = len(new_doc_ids)
+    
     unique_codes = len(set([c.codigo for c in meta_rows if c.codigo]))
 
     stats_meetings = {}
@@ -303,8 +416,11 @@ def build_docs_index(
         "universe": universe,
         "input_dir": input_dir,
         "files": len(files),
+        "files_processed": len(files_to_process),
+        "files_skipped": skipped_files,
         "docs": unique_docs,
-        "chunks": len(meta_rows),
+        "chunks_new": len(meta_rows),
+        "chunks_total": index.ntotal if index else len(meta_rows),
         "dim": dim,
         "index_path": idx_path,
         "meta_path": meta_path,
@@ -312,6 +428,8 @@ def build_docs_index(
         "catalog_docs_matched_by_filename": matched_catalog_docs,
         "unique_codes_in_meta": unique_codes,
         "emb_cache_path": get_emb_cache_path(out_dir, universe),
+        "file_cache_path": get_file_cache_path(out_dir, universe),
+        "incremental_update": existing_index is not None,
         "note": "Para que el catálogo se aplique, el filename idealmente debe contener el código tipo P-SGSI-14 / M-SGCSI-01.",
         **({"meetings_stats": stats_meetings} if stats_meetings else {})
     }

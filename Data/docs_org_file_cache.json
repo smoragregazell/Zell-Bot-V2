@@ -1,0 +1,62 @@
+{
+  "knowledgebase\\iso\\Declaracion_de_Aplicabilidad.txt": {
+    "sha256": "4b45ddb0e418bfc0216bead6d9c788a68670c94905ae347e18476092fcdc5844",
+    "processed_at": "2026-01-06T15:31:08.198060Z",
+    "path": "knowledgebase\\iso\\Declaracion_de_Aplicabilidad.txt"
+  },
+  "knowledgebase\\iso\\M-RH-01 Manual de Inducción y beneficios.txt": {
+    "sha256": "29daab4ac859df1cc3116f559316d2abed59a75cd31be62cd3680b7fb7ac5505",
+    "processed_at": "2026-01-06T15:31:08.198060Z",
+    "path": "knowledgebase\\iso\\M-RH-01 Manual de Inducción y beneficios.txt"
+  },
+  "knowledgebase\\iso\\M-RH-02 Manual de de Prevención de Riesgos Psicosociales.txt": {
+    "sha256": "0d5ccbe7aeba7417948355e1e6de8e8903fc1e048e47ea0fae2d810bc7ca8047",
+    "processed_at": "2026-01-06T15:31:08.198060Z",
+    "path": "knowledgebase\\iso\\M-RH-02 Manual de de Prevención de Riesgos Psicosociales.txt"
+  },
+  "knowledgebase\\iso\\M-RH-04 Manual Organizacional.txt": {
+    "sha256": "e8f7b04a6a6229aa53017bcead1c7d19aed6a4ebcc829cfa8e575ff5b8c1cb99",
+    "processed_at": "2026-01-06T15:31:08.198060Z",
+    "path": "knowledgebase\\iso\\M-RH-04 Manual Organizacional.txt"
+  },
+  "knowledgebase\\iso\\M-SGCSI-01 Manual de Calidad y Seguridad de la Información.txt": {
+    "sha256": "6925827fdcdd5c4b66986c67833711f6c69145f2184530aa7908cbad091e7127",
+    "processed_at": "2026-01-06T15:31:08.198060Z",
+    "path": "knowledgebase\\iso\\M-SGCSI-01 Manual de Calidad y Seguridad de la Información.txt"
+  },
+  "knowledgebase\\iso\\M-SGSI-01 Guía de Usuario del SGSI.txt": {
+    "sha256": "43bcbf9a079c1577e8d525f5197da9fffd4f645375df0cab7096469ef7250709",
+    "processed_at": "2026-01-06T15:31:08.198060Z",
+    "path": "knowledgebase\\iso\\M-SGSI-01 Guía de Usuario del SGSI.txt"
+  },
+  "knowledgebase\\iso\\PO-RH-03 Politica Puntualidad y Asistencia.txt": {
+    "sha256": "ba972c8ec6edd9743ace67b45084bab8995436e5428b322986018c49f91c13e4",
+    "processed_at": "2026-01-06T15:31:08.198060Z",
+    "path": "knowledgebase\\iso\\PO-RH-03 Politica Puntualidad y Asistencia.txt"
+  },
+  "knowledgebase\\iso\\PO-RH-04 Politica de Comunicación y Dialogo Abierto.txt": {
+    "sha256": "0ec44e3520224249d79663bb55a45c4978526e40dcda6e09521f1f9a7b609bbf",
+    "processed_at": "2026-01-06T15:31:08.198060Z",
+    "path": "knowledgebase\\iso\\PO-RH-04 Politica de Comunicación y Dialogo Abierto.txt"
+  },
+  "knowledgebase\\iso\\PO-RH-05 Reglamento interno de trabajo.txt": {
+    "sha256": "103a3fa42ac8692d986d7c7a4c96f553173831f2ab15a03334585aec8fa6ffdd",
+    "processed_at": "2026-01-06T15:31:08.198060Z",
+    "path": "knowledgebase\\iso\\PO-RH-05 Reglamento interno de trabajo.txt"
+  },
+  "knowledgebase\\iso\\PO-RH-06 Codigo de Ética.txt": {
+    "sha256": "0523f7788084322285664892da7cdc2c44ae12749d9b6ae79a04bedab4afd784",
+    "processed_at": "2026-01-06T15:31:08.198060Z",
+    "path": "knowledgebase\\iso\\PO-RH-06 Codigo de Ética.txt"
+  },
+  "knowledgebase\\iso\\PO-RH-09 Política de Prevención de Riesgos Psicosociales.txt": {
+    "sha256": "3d2a31dda0e78c661835bcdedb7dbb758db89fc97d52a3f0865d77317be59c05",
+    "processed_at": "2026-01-06T15:31:08.198060Z",
+    "path": "knowledgebase\\iso\\PO-RH-09 Política de Prevención de Riesgos Psicosociales.txt"
+  },
+  "knowledgebase\\iso\\PO-RH-10 Política de Vacaciones.txt": {
+    "sha256": "c25dea3a94f93dc3f930bcd6f25b72ac7792a793bac28f187c00bd53de7d1a4e",
+    "processed_at": "2026-01-06T15:31:08.198060Z",
+    "path": "knowledgebase\\iso\\PO-RH-10 Política de Vacaciones.txt"
+  }
+}

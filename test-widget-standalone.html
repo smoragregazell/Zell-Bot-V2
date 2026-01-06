@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Widget V2 - Test Standalone</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 40px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            margin: 0;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+        }
+        .info {
+            background: #f0f7ff;
+            border-left: 4px solid #2196F3;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        .info strong {
+            color: #1976D2;
+        }
+        .status {
+            padding: 12px;
+            border-radius: 8px;
+            margin: 15px 0;
+            font-weight: bold;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .status.info {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        .config-box {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .config-box label {
+            display: block;
+            margin: 10px 0 5px 0;
+            font-weight: bold;
+            color: #333;
+        }
+        .config-box input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            box-sizing: border-box;
+            font-size: 14px;
+        }
+        .config-box button {
+            width: 100%;
+            background: #e5a500;
+            color: #000;
+            border: none;
+            padding: 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 16px;
+            margin-top: 15px;
+        }
+        .config-box button:hover {
+            background: #ffcd3c;
+        }
+        .instructions {
+            background: #e8f5e9;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+        .instructions h3 {
+            margin-top: 0;
+            color: #2e7d32;
+        }
+        .instructions ol {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+        .instructions li {
+            margin: 8px 0;
+        }
+        code {
+            background: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            color: #d63384;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 Widget V2 - Test Standalone</h1>
+        <p class="subtitle">Prueba el widget directamente en tu navegador</p>
+
+        <div class="info">
+            <strong>📌 Importante:</strong> Asegúrate de que tu servidor backend esté corriendo en 
+            <code>http://localhost:5050</code> (o ajusta la URL abajo).
+        </div>
+
+        <div class="config-box">
+            <label for="backend-url">🌐 URL del Backend:</label>
+            <input type="text" id="backend-url" value="http://localhost:5050" placeholder="http://localhost:5050">
+            
+            <label for="user-name" style="margin-top: 15px;">👤 Tu Nombre:</label>
+            <input type="text" id="user-name" value="Usuario Test" placeholder="Tu nombre">
+            
+            <div id="status"></div>
+            
+            <button onclick="inicializarWidget()">🚀 Iniciar Widget</button>
+        </div>
+
+        <div class="instructions">
+            <h3>📋 Instrucciones:</h3>
+            <ol>
+                <li>Verifica que tu backend esté corriendo (ej: <code>uvicorn main:app --reload</code>)</li>
+                <li>Ajusta la URL del backend si es necesario</li>
+                <li>Haz clic en <strong>"🚀 Iniciar Widget"</strong></li>
+                <li>Busca el botón <strong>"IA"</strong> en la esquina inferior izquierda</li>
+                <li>Haz clic en el botón para abrir el chat</li>
+                <li>¡Empieza a chatear! 🎉</li>
+            </ol>
+        </div>
+    </div>
+
+    <!-- Widget Script (inline para que funcione standalone) -->
+    <script>
+        // ============================================
+        // CONFIGURACIÓN INICIAL
+        // ============================================
+        let widgetInicializado = false;
+        let widgetScriptCargado = false;
+
+        // Configuración por defecto
+        const DEFAULT_BACKEND = 'http://localhost:5050';
+        const DEFAULT_USER = 'Usuario Test';
+        const DEFAULT_TOKEN = 'test-token-dev'; // Para desarrollo con SKIP_AUTH=1
+
+        // ============================================
+        // FUNCIONES DE UTILIDAD
+        // ============================================
+        function mostrarStatus(mensaje, tipo = 'info') {
+            const statusDiv = document.getElementById('status');
+            statusDiv.className = `status ${tipo}`;
+            statusDiv.innerHTML = mensaje;
+        }
+
+        function verificarBackend(url) {
+            return fetch(`${url}/docs`, { method: 'GET', mode: 'no-cors' })
+                .then(() => true)
+                .catch(() => {
+                    // Intentar verificar con una request real
+                    return fetch(`${url}/chat_v2`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            conversation_id: 'test-connection',
+                            user_message: 'test',
+                            zToken: DEFAULT_TOKEN,
+                            userName: DEFAULT_USER
+                        })
+                    }).then(res => res.status !== 404).catch(() => false);
+                });
+        }
+
+        // ============================================
+        // INICIALIZACIÓN DEL WIDGET
+        // ============================================
+        async function inicializarWidget() {
+            const backendUrl = document.getElementById('backend-url').value.trim() || DEFAULT_BACKEND;
+            const userName = document.getElementById('user-name').value.trim() || DEFAULT_USER;
+
+            // Validar URL
+            try {
+                new URL(backendUrl);
+            } catch (e) {
+                mostrarStatus('❌ URL inválida. Debe ser algo como: http://localhost:5050', 'error');
+                return;
+            }
+
+            mostrarStatus('⏳ Verificando conexión con el backend...', 'info');
+
+            // Verificar backend (no bloqueante)
+            verificarBackend(backendUrl).then(conectado => {
+                if (conectado) {
+                    mostrarStatus('✅ Backend conectado correctamente', 'success');
+                } else {
+                    mostrarStatus('⚠️ No se pudo verificar el backend. Asegúrate de que esté corriendo.', 'error');
+                }
+            });
+
+            // Configurar variables globales ANTES de cargar el widget
+            window.BACKEND_URL = backendUrl;
+            window.vUserName = userName;
+            window.zToken = DEFAULT_TOKEN; // Token por defecto para desarrollo
+
+            mostrarStatus('⏳ Cargando widget...', 'info');
+
+            // Cargar el script del widget
+            if (!widgetScriptCargado) {
+                const script = document.createElement('script');
+                script.src = 'chat-widget-v2.js';
+                script.onload = () => {
+                    widgetScriptCargado = true;
+                    mostrarStatus('✅ Widget cargado. Busca el botón "IA" en la esquina inferior izquierda! 👇', 'success');
+                    
+                    // Deshabilitar el botón después de cargar
+                    const btn = document.querySelector('.config-box button');
+                    btn.disabled = true;
+                    btn.textContent = '✅ Widget Iniciado';
+                    btn.style.background = '#28a745';
+                    btn.style.color = 'white';
+                };
+                script.onerror = () => {
+                    mostrarStatus('❌ Error: No se encontró chat-widget-v2.js. Asegúrate de que el archivo esté en la misma carpeta.', 'error');
+                };
+                document.body.appendChild(script);
+            } else {
+                // Si ya está cargado, solo actualizar configuración
+                mostrarStatus('✅ Configuración actualizada. El widget ya está funcionando.', 'success');
+            }
+        }
+
+        // ============================================
+        // AUTO-VERIFICACIÓN AL CARGAR
+        // ============================================
+        window.addEventListener('load', () => {
+            const backendUrl = document.getElementById('backend-url').value || DEFAULT_BACKEND;
+            mostrarStatus('💡 Haz clic en "🚀 Iniciar Widget" para comenzar', 'info');
+        });
+    </script>
+</body>
+</html>
+

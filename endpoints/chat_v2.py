@@ -7,11 +7,8 @@
 import os
 import json
 import time
-import csv
 import inspect
 from typing import Any, Dict, List, Optional
-from datetime import datetime
-from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
@@ -43,6 +40,15 @@ from Tools.query_tool import (
 )
 from utils.contextManager.context_handler import get_interaction_id
 
+# --- Logging V2 ---
+from utils.logs_v2 import (
+    log_chat_v2_interaction,
+    log_token_usage,
+    extract_token_usage,
+    calculate_cost,
+    set_trace_function,
+)
+
 router = APIRouter()
 
 TRACE_V2 = os.getenv("TRACE_V2", "0") == "1"
@@ -52,6 +58,12 @@ SKIP_AUTH = os.getenv("SKIP_AUTH", "0") == "1"
 # Almacena el último response_id por conversation_id para mantener contexto
 # Formato: {conversation_id: {"last_response_id": "resp_xxx", "updated_at": timestamp}}
 _conversation_response_ids: Dict[str, Dict[str, Any]] = {}
+
+# --- Web search tracking ---
+# Almacena el conteo de búsquedas web por conversación
+# Formato: {conversation_id: count}
+_web_search_counts: Dict[str, int] = {}
+MAX_WEB_SEARCHES_PER_CONV = 3  # Límite de búsquedas web por conversación
 
 
 def tr(msg: str) -> None:
@@ -79,72 +91,31 @@ def save_last_response_id(conversation_id: str, response_id: str) -> None:
 def clear_conversation_context(conversation_id: str) -> None:
     """Limpia el contexto de una conversación (para empezar de nuevo)."""
     _conversation_response_ids.pop(conversation_id, None)
+    _web_search_counts.pop(conversation_id, None)
     tr(f"Cleared context for conv_id={conversation_id}")
 
 
-# --- Logging simple a CSV ---
-CHAT_V2_LOG_FILE = os.path.join("logs", "chat_v2_interactions.csv")
+def get_web_search_count(conversation_id: str) -> int:
+    """Obtiene el número de búsquedas web realizadas en esta conversación."""
+    return _web_search_counts.get(conversation_id, 0)
 
 
-def ensure_log_file_exists():
-    """Asegura que el archivo de log existe con headers."""
-    os.makedirs("logs", exist_ok=True)
-    if not os.path.exists(CHAT_V2_LOG_FILE) or os.path.getsize(CHAT_V2_LOG_FILE) == 0:
-        with open(CHAT_V2_LOG_FILE, "w", newline="", encoding="utf-8") as f:
-            writer = csv.writer(f)
-            writer.writerow([
-                "timestamp",
-                "userName",
-                "conversation_id",
-                "user_message",
-                "response",
-                "response_id",
-                "rounds_used",
-                "had_previous_context",
-                "extra_info"
-            ])
+def increment_web_search_count(conversation_id: str) -> int:
+    """Incrementa el contador de búsquedas web y retorna el nuevo valor."""
+    current = _web_search_counts.get(conversation_id, 0)
+    new_count = current + 1
+    _web_search_counts[conversation_id] = new_count
+    tr(f"Incremented web_search count for conv_id={conversation_id}: {new_count}")
+    return new_count
 
 
-def log_chat_v2_interaction(
-    userName: str,
-    conversation_id: str,
-    user_message: str,
-    response: str,
-    response_id: Optional[str] = None,
-    rounds_used: int = 0,
-    had_previous_context: bool = False,
-    extra_info: str = ""
-):
-    """Log simple de interacciones de chat_v2 a CSV."""
-    try:
-        ensure_log_file_exists()
-        timestamp = datetime.now(ZoneInfo("America/Mexico_City")).strftime("%Y-%m-%d %H:%M:%S")
-        
-        # Usar modo append con manejo de errores más robusto
-        try:
-            with open(CHAT_V2_LOG_FILE, "a", newline="", encoding="utf-8") as f:
-                writer = csv.writer(f)
-                writer.writerow([
-                    timestamp,
-                    userName or "N/A",
-                    conversation_id or "",  # Asegurar que no sea None
-                    user_message[:500] if len(user_message) > 500 else user_message,  # Limitar tamaño
-                    response[:1000] if len(response) > 1000 else response,  # Limitar tamaño
-                    response_id or "",
-                    rounds_used,
-                    "Yes" if had_previous_context else "No",
-                    extra_info
-                ])
-                f.flush()  # Forzar escritura inmediata
-            tr(f"Logged interaction to {CHAT_V2_LOG_FILE}")
-        except PermissionError as pe:
-            tr(f"Permission denied writing to CSV (file may be open): {pe}")
-        except IOError as ioe:
-            tr(f"IO error writing to CSV: {ioe}")
-    except Exception as e:
-        tr(f"Error logging to CSV: {e}")
-        import traceback
-        tr(f"Traceback: {traceback.format_exc()}")
+def can_use_web_search(conversation_id: str) -> bool:
+    """Verifica si se puede realizar una búsqueda web (no se ha alcanzado el límite)."""
+    return get_web_search_count(conversation_id) < MAX_WEB_SEARCHES_PER_CONV
+
+
+# Configurar función de trace para logs_v2
+set_trace_function(tr)
 
 
 # --- OpenAI client (usando ai_calls centralizado) ---
@@ -214,14 +185,20 @@ TOOLS: List[Dict[str, Any]] = [
                     "type": "string",
                     "description": (
                         "Universo de documentos cuando scope=docs. "
-                        "Opciones: 'policies_iso' (políticas/procedimientos ISO), "
-                        "'meetings_weekly' (minutas de reuniones semanales con temas tratados, asistentes, fechas), "
-                        "u otros universos disponibles. "
-                        "Usa 'meetings_weekly' cuando el usuario pregunte sobre reuniones, temas tratados en juntas, asistentes a reuniones, o decisiones de reuniones."
+                        "Opciones: "
+                        "'docs_org' (PREDETERMINADO - documentos organizacionales: políticas, procedimientos, manuales ISO, guías, reglamentos, códigos de ética). "
+                        "Este es el universo principal donde se buscará la mayoría de las veces. "
+                        "'meetings_weekly' (minutas de reuniones semanales - PROBLEMAS Y SOLUCIONES). "
+                        "Úsalo cuando el usuario pregunte sobre: problemas similares que otros han enfrentado, soluciones ya discutidas, "
+                        "situaciones que el equipo ya vivió ('¿alguien ha tenido este problema?', 'experiencia similar', 'caso parecido', "
+                        "'¿cómo se resolvió esto antes?', '¿esto ya pasó?'). "
+                        "También para: reuniones específicas, temas tratados en juntas, asistentes, fechas de reuniones, decisiones o acuerdos. "
+                        "DECISIÓN: Si la pregunta es sobre problema/solución/caso similar, busca PRIMERO en meetings_weekly. "
+                        "Si no encuentras nada relevante, entonces busca en docs_org."
                     ),
-                    "default": "policies_iso",
+                    "default": "docs_org",
                 },
-                "top_k": {"type": "integer", "default": 8},
+                "top_k": {"type": "integer", "default": 5},
             },
             "required": ["query"],
         },
@@ -246,9 +223,9 @@ TOOLS: List[Dict[str, Any]] = [
                     "description": (
                         "Universo de documentos cuando type=doc. "
                         "Debe coincidir con el universo usado en search_knowledge para obtener el chunk_id. "
-                        "Opciones: 'policies_iso', 'meetings_weekly', u otros."
+                        "Opciones: 'docs_org', 'meetings_weekly', u otros."
                     ),
-                    "default": "policies_iso",
+                    "default": "docs_org",
                 },
             },
             "required": ["type", "id"],
@@ -277,6 +254,9 @@ TOOLS: List[Dict[str, Any]] = [
             "required": ["user_question"],
         },
     },
+    {
+        "type": "web_search"  # Tool integrado de OpenAI para búsquedas web en tiempo real
+    },
 ]
 
 
@@ -297,8 +277,8 @@ def tool_search_knowledge(args: Dict[str, Any], conversation_id: str) -> Dict[st
     query = (args.get("query") or "").strip()
     scope = args.get("scope", "all")
     policy = args.get("policy", "auto")
-    top_k = int(args.get("top_k", 8))
-    universe = (args.get("universe") or "policies_iso").strip()
+    top_k = int(args.get("top_k", 5))
+    universe = (args.get("universe") or "docs_org").strip()
 
     if not query:
         return {"hits": [], "notes": ["query vacío"]}
@@ -318,12 +298,13 @@ def tool_search_knowledge(args: Dict[str, Any], conversation_id: str) -> Dict[st
         if policy in ("keyword", "hybrid"):
             words = [w.strip(".,:;!?()[]{}\"'").lower() for w in query.split()]
             words = [w for w in words if len(w) >= 4][:6] or [query]
+            tr(f"[TICKETS] QUERY (keyword): '{query}' -> keywords={words}")
             try:
                 like_results = search_tickets_by_keywords(words, max_results=top_k)
             except TypeError:
                 like_results = search_tickets_by_keywords(words)
 
-            tr(f"LIKE keywords={words} hits={len(like_results) if like_results else 0}")
+            tr(f"[TICKETS] LIKE keywords={words} hits={len(like_results) if like_results else 0}")
 
             for r in like_results or []:
                 tid = r.get("IdTicket") or r.get("ticket_id") or r.get("id")
@@ -342,11 +323,12 @@ def tool_search_knowledge(args: Dict[str, Any], conversation_id: str) -> Dict[st
 
         # Semantic search (ticket FAISS)
         if policy in ("semantic", "hybrid"):
+            tr(f"[TICKETS] QUERY (semantic): '{query}'")
             try:
                 vec = generate_openai_embedding(query, conversation_id, interaction_id=None)
                 if vec is not None:
                     faiss_results, _dbg = perform_faiss_search(vec, k=top_k)
-                    tr(f"FAISS hits={len(faiss_results) if faiss_results else 0}")
+                    tr(f"[TICKETS] FAISS hits={len(faiss_results) if faiss_results else 0}")
 
                     for r in faiss_results or []:
                         tid = r.get("ticket_id") or r.get("IdTicket") or r.get("id")
@@ -371,11 +353,12 @@ def tool_search_knowledge(args: Dict[str, Any], conversation_id: str) -> Dict[st
 
     # ---- DOCS ----
     if scope in ("docs", "all"):
+        tr(f"[DOCS] QUERY: '{query}' universe={universe} top_k={top_k}")
         try:
             doc_res = search_docs(query=query, universe=universe, top_k=top_k)
             if doc_res.get("ok"):
                 dhits = doc_res.get("hits", []) or []
-                tr(f"DOCS hits={len(dhits)} universe={universe}")
+                tr(f"[DOCS] hits={len(dhits)} universe={universe}")
 
                 for h in dhits:
                     # Construir snippet según tipo de documento
@@ -446,7 +429,7 @@ def tool_get_item(args: Dict[str, Any], conversation_id: str) -> Dict[str, Any]:
 
     # ---- DOC ----
     if item_type == "doc":
-        universe = (args.get("universe") or "policies_iso").strip()
+        universe = (args.get("universe") or "docs_org").strip()
         try:
             # item_id = chunk_id
             return get_doc_context(universe=universe, chunk_ids=[item_id], max_chunks=6)
@@ -608,6 +591,9 @@ async def chat_v2(req: ChatV2Request):
         # prev_id se inicializa con el de la conversación anterior (solo para el primer round)
         prev_id: Optional[str] = conversation_prev_id
         next_input: List[Dict[str, Any]] = [{"role": "user", "content": req.user_message}]
+        
+        # Guardar el mensaje original del usuario para referencia (útil para web_search)
+        original_user_message = req.user_message
 
         # Tool-calling loop
         for round_idx in range(1, 7):
@@ -642,6 +628,14 @@ async def chat_v2(req: ChatV2Request):
                     raise  # Re-lanzar si no es un error de previous_response_id
             
             tr(f"OpenAI response.id={response.id} took={time.time() - t0:.2f}s")
+            
+            # Extraer información de tokens y costos
+            token_info = extract_token_usage(response)
+            model_used = os.getenv("V2_MODEL", "gpt-5-mini")
+            if token_info["total_tokens"] > 0:
+                tr(f"Tokens: input={token_info['input_tokens']}, output={token_info['output_tokens']}, total={token_info['total_tokens']}")
+                costs = calculate_cost(model_used, token_info["input_tokens"], token_info["output_tokens"])
+                tr(f"Cost: ${costs['cost_total_usd']:.6f} (input: ${costs['cost_input_usd']:.6f}, output: ${costs['cost_output_usd']:.6f})")
 
             rounds_used = round_idx
             final_response_id = response.id
@@ -695,15 +689,84 @@ async def chat_v2(req: ChatV2Request):
                 }
 
             tool_outputs: List[Dict[str, Any]] = []
+            web_search_used_this_round = False
+            tools_called_this_round: List[str] = []
 
             for i, item in enumerate(calls, start=1):
                 name = getattr(item, "name", "")
+                tool_type = getattr(item, "type", None)
+                
+                # Detectar si es web_search (tool integrado de OpenAI)
+                # Los tools integrados pueden venir sin "name" pero con "type"
+                is_web_search = (tool_type == "web_search" or name == "web_search")
+                
+                # Validar límite de búsquedas web
+                if is_web_search:
+                    # Intentar extraer el query del contexto
+                    # web_search es un tool integrado, así que el query viene del contexto de la conversación
+                    web_query = "N/A"
+                    try:
+                        # Primero intentar del mensaje original del usuario (más confiable)
+                        if original_user_message:
+                            web_query = original_user_message[:200]
+                        # Si no hay mensaje original, intentar del input actual
+                        elif next_input:
+                            for inp in next_input:
+                                if isinstance(inp, dict):
+                                    content = inp.get("content", "")
+                                    if content and len(content) > 0:
+                                        web_query = str(content)[:200]
+                                        break
+                    except Exception as e:
+                        tr(f"[WEB_SEARCH] Error extracting query: {e}")
+                    
+                    tr(f"[WEB_SEARCH] Tool detected in round {round_idx} | QUERY: '{web_query}'")
+                    
+                    if not can_use_web_search(req.conversation_id):
+                        current_count = get_web_search_count(req.conversation_id)
+                        tr(f"[WEB_SEARCH] LIMIT REACHED for conv_id={req.conversation_id} (count={current_count}/{MAX_WEB_SEARCHES_PER_CONV}) - BLOCKED")
+                        result = {
+                            "error": f"Límite de búsquedas web alcanzado. Se han realizado {current_count} búsquedas web en esta conversación (máximo: {MAX_WEB_SEARCHES_PER_CONV}).",
+                            "limit_reached": True,
+                            "current_count": current_count,
+                            "max_allowed": MAX_WEB_SEARCHES_PER_CONV
+                        }
+                        tool_outputs.append(
+                            {
+                                "type": "function_call_output",
+                                "call_id": getattr(item, "call_id", ""),
+                                "output": json.dumps(result, ensure_ascii=False),
+                            }
+                        )
+                        # No marcar como usado si fue bloqueado
+                        continue
+                    else:
+                        # Incrementar contador antes de procesar
+                        new_count = increment_web_search_count(req.conversation_id)
+                        web_search_used_this_round = True
+                        tools_called_this_round.append("web_search")
+                        tr(f"[WEB_SEARCH] ALLOWED for conv_id={req.conversation_id} (count={new_count}/{MAX_WEB_SEARCHES_PER_CONV}) - OpenAI will process automatically")
+                
                 try:
                     args = json.loads(getattr(item, "arguments", "") or "{}")
                 except Exception:
                     args = {"_raw_arguments": getattr(item, "arguments", "")}
 
-                tr(f"CALL {i}: {name} args={args}")
+                tool_name_display = name or tool_type or "unknown"
+                tr(f"CALL {i}: {tool_name_display} args={args}")
+                
+                if not is_web_search:
+                    tools_called_this_round.append(tool_name_display)
+
+                # web_search es un tool integrado de OpenAI
+                # OpenAI lo ejecuta automáticamente cuando está en la lista de tools
+                # No necesitamos implementación custom, solo tracking del límite
+                if is_web_search:
+                    # Ya validamos el límite arriba y incrementamos el contador si está permitido
+                    # OpenAI procesará web_search automáticamente y los resultados aparecerán en el siguiente round
+                    tr(f"[WEB_SEARCH] Processing automatically by OpenAI (count={get_web_search_count(req.conversation_id)})")
+                    # No agregamos output manual, OpenAI maneja tools integrados automáticamente
+                    continue
 
                 fn = TOOL_IMPL.get(name)
                 t1 = time.time()
@@ -742,6 +805,20 @@ async def chat_v2(req: ChatV2Request):
                     }
                 )
 
+            # Log token usage para este round
+            if token_info["total_tokens"] > 0:
+                log_token_usage(
+                    conversation_id=req.conversation_id,
+                    response_id=response.id,
+                    round_num=round_idx,
+                    model=model_used,
+                    input_tokens=token_info["input_tokens"],
+                    output_tokens=token_info["output_tokens"],
+                    total_tokens=token_info["total_tokens"],
+                    web_search_used=web_search_used_this_round,
+                    tools_called=tools_called_this_round
+                )
+            
             prev_id = response.id
             next_input = tool_outputs
 

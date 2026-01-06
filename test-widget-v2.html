@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Widget V2 - Mockup</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+            background: #f5f5f5;
+        }
+        .info-box {
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .info-box h2 {
+            margin-top: 0;
+            color: #e5a500;
+        }
+        .config-section {
+            background: #fff3cd;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            border-left: 4px solid #e5a500;
+        }
+        .config-section label {
+            display: block;
+            margin: 10px 0 5px 0;
+            font-weight: bold;
+        }
+        .config-section input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        .config-section button {
+            background: #e5a500;
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+        .config-section button:hover {
+            background: #ffcd3c;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        code {
+            background: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="info-box">
+        <h1>🧪 Test Widget V2 - Mockup</h1>
+        <p>Esta es una página de prueba para el widget V2. Configura los valores abajo y luego haz clic en el botón "IA" en la esquina inferior izquierda.</p>
+    </div>
+
+    <div class="info-box">
+        <h2>⚙️ Configuración</h2>
+        <div class="config-section">
+            <label for="backend-url">Backend URL:</label>
+            <input type="text" id="backend-url" value="http://localhost:5050" placeholder="http://localhost:5050">
+            <small>URL de tu servidor backend (debe incluir http:// o https://)</small>
+            
+            <label for="z-token" style="margin-top: 15px;">zToken (opcional para desarrollo):</label>
+            <input type="text" id="z-token" value="" placeholder="Dejar vacío si SKIP_AUTH=1 en backend">
+            <small>Si el backend tiene SKIP_AUTH=1, puedes dejar esto vacío. Si no, necesitas un token válido.</small>
+            
+            <label for="user-name" style="margin-top: 15px;">Nombre de Usuario:</label>
+            <input type="text" id="user-name" value="Usuario Test" placeholder="Usuario Test">
+            
+            <button onclick="configurarWidget()">✅ Configurar y Cargar Widget</button>
+        </div>
+        
+        <div id="status-message"></div>
+    </div>
+
+    <div class="info-box">
+        <h2>📋 Instrucciones</h2>
+        <ol>
+            <li>Configura la <strong>Backend URL</strong> (debe ser la URL de tu servidor)</li>
+            <li>Si tu backend tiene <code>SKIP_AUTH=1</code>, puedes dejar el token vacío</li>
+            <li>Haz clic en <strong>"✅ Configurar y Cargar Widget"</strong></li>
+            <li>Busca el botón <strong>"IA"</strong> en la esquina inferior izquierda</li>
+            <li>Haz clic en el botón para abrir el widget</li>
+            <li>Envía un mensaje de prueba: <code>"Hola"</code></li>
+        </ol>
+    </div>
+
+    <div class="info-box">
+        <h2>🐛 Debugging</h2>
+        <p>Abre la consola del navegador (F12) para ver logs detallados:</p>
+        <ul>
+            <li>Requests al backend</li>
+            <li>Respuestas recibidas</li>
+            <li>Errores si los hay</li>
+        </ul>
+        <p><strong>Verifica también:</strong></p>
+        <ul>
+            <li>Logs del servidor backend</li>
+            <li>Archivo <code>logs/chat_v2_interactions.csv</code></li>
+        </ul>
+    </div>
+
+    <script>
+        let widgetCargado = false;
+
+        function mostrarStatus(mensaje, tipo = 'info') {
+            const statusDiv = document.getElementById('status-message');
+            statusDiv.className = `status ${tipo}`;
+            statusDiv.innerHTML = mensaje;
+        }
+
+        async function obtenerTokenDesdeBackend() {
+            const backendUrl = document.getElementById('backend-url').value;
+            try {
+                // Intentar obtener token desde /start_session (si existe)
+                const response = await fetch(`${backendUrl}/start_session`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        user_email: 'test@ejemplo.com',
+                        user_hash: 'test-hash'
+                    })
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    return data.token;
+                }
+            } catch (e) {
+                console.log('No se pudo obtener token desde backend (normal si SKIP_AUTH=1)');
+            }
+            return null;
+        }
+
+        async function configurarWidget() {
+            const backendUrl = document.getElementById('backend-url').value.trim();
+            const zToken = document.getElementById('z-token').value.trim();
+            const userName = document.getElementById('user-name').value.trim() || 'Usuario Test';
+
+            if (!backendUrl) {
+                mostrarStatus('❌ Por favor, ingresa la URL del backend', 'error');
+                return;
+            }
+
+            // Validar URL
+            try {
+                new URL(backendUrl);
+            } catch (e) {
+                mostrarStatus('❌ URL inválida. Debe ser algo como: http://localhost:5050', 'error');
+                return;
+            }
+
+            // Configurar variables globales
+            window.BACKEND_URL = backendUrl;
+            window.vUserName = userName;
+
+            // Intentar obtener token si no se proporcionó
+            if (!zToken) {
+                mostrarStatus('⏳ Intentando obtener token desde backend...', 'info');
+                const tokenObtenido = await obtenerTokenDesdeBackend();
+                if (tokenObtenido) {
+                    window.zToken = tokenObtenido;
+                    mostrarStatus('✅ Token obtenido desde backend', 'success');
+                } else {
+                    window.zToken = 'YOUR_ZTOKEN_HERE';
+                    mostrarStatus('⚠️ No se pudo obtener token. Usando fallback. Asegúrate de que SKIP_AUTH=1 en el backend.', 'info');
+                }
+            } else {
+                window.zToken = zToken;
+                mostrarStatus('✅ Token configurado manualmente', 'success');
+            }
+
+            // Cargar el widget si no está cargado
+            if (!widgetCargado) {
+                const script = document.createElement('script');
+                script.src = 'chat-widget-v2.js';
+                script.onload = () => {
+                    mostrarStatus('✅ Widget cargado correctamente. Busca el botón "IA" en la esquina inferior izquierda.', 'success');
+                    widgetCargado = true;
+                };
+                script.onerror = () => {
+                    mostrarStatus('❌ Error al cargar chat-widget-v2.js. Verifica que el archivo exista.', 'error');
+                };
+                document.body.appendChild(script);
+            } else {
+                mostrarStatus('✅ Configuración actualizada. El widget ya está cargado.', 'success');
+            }
+        }
+
+        // Verificar conexión al backend al cargar
+        window.addEventListener('load', async () => {
+            const backendUrl = document.getElementById('backend-url').value;
+            if (backendUrl) {
+                try {
+                    const response = await fetch(`${backendUrl}/docs`, { method: 'GET' });
+                    if (response.ok || response.status === 404) {
+                        // El servidor responde (404 es normal para /docs si no está configurado)
+                        mostrarStatus('✅ Backend accesible', 'success');
+                    }
+                } catch (e) {
+                    mostrarStatus('⚠️ No se pudo conectar al backend. Verifica que esté corriendo.', 'error');
+                }
+            }
+        });
+    </script>
+</body>
+</html>
+

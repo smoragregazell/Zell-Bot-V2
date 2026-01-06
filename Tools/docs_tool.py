@@ -28,8 +28,15 @@ def _load_meta(meta_path: str) -> List[Dict[str, Any]]:
 
 
 def _load_index_and_meta(universe: str, data_dir: str = "Data") -> Tuple[Any, List[Dict[str, Any]]]:
-    idx_path = os.path.join(data_dir, f"docs_{universe}.index")
-    meta_path = os.path.join(data_dir, f"docs_{universe}_meta.jsonl")
+    # Si el universo ya empieza con "docs_", no agregar el prefijo nuevamente
+    # Esto permite usar "docs_org" directamente sin generar "docs_docs_org"
+    if universe.startswith("docs_"):
+        index_name = universe
+    else:
+        index_name = f"docs_{universe}"
+    
+    idx_path = os.path.join(data_dir, f"{index_name}.index")
+    meta_path = os.path.join(data_dir, f"{index_name}_meta.jsonl")
 
     if not os.path.exists(idx_path):
         raise FileNotFoundError(f"No existe index: {idx_path}")
@@ -104,24 +111,81 @@ def get_doc_context(
     universe: str,
     chunk_ids: Optional[List[str]] = None,
     doc_id: Optional[str] = None,
-    max_chunks: int = 6
+    max_chunks: int = 6,
+    expand_adjacent: bool = True
 ) -> Dict[str, Any]:
     """
     Regresa texto (chunks) para contexto.
-    - Si pasas chunk_ids: regresa esos chunks (hasta max_chunks).
+    - Si pasas chunk_ids: regresa esos chunks + chunks adyacentes (1 arriba, 1 abajo) del mismo doc.
     - Si pasas doc_id: regresa los primeros max_chunks de ese doc.
+    
+    Args:
+        expand_adjacent: Si True, incluye chunks adyacentes (anterior y siguiente) del mismo documento.
     """
     _, meta = _load_index_and_meta(universe)
 
     selected = []
+    selected_ids = set()
 
     if chunk_ids:
-        want = set(chunk_ids)
+        # Crear índice de chunks por doc_id y chunk_index para búsqueda rápida
+        chunks_by_id = {m.get("chunk_id"): m for m in meta}
+        chunks_by_doc_and_index = {}  # {doc_id: {chunk_index: chunk}}
+        
         for m in meta:
-            if m.get("chunk_id") in want:
+            doc_id_key = m.get("doc_id")
+            chunk_idx = m.get("chunk_index")
+            if doc_id_key and chunk_idx is not None:
+                if doc_id_key not in chunks_by_doc_and_index:
+                    chunks_by_doc_and_index[doc_id_key] = {}
+                chunks_by_doc_and_index[doc_id_key][chunk_idx] = m
+        
+        # Primero agregar los chunks encontrados
+        want = set(chunk_ids)
+        for chunk_id in chunk_ids:
+            if chunk_id in chunks_by_id:
+                m = chunks_by_id[chunk_id]
                 selected.append(m)
-                if len(selected) >= max_chunks:
-                    break
+                selected_ids.add(chunk_id)
+        
+        # Expandir con chunks adyacentes si está habilitado
+        if expand_adjacent:
+            for chunk_id in chunk_ids:
+                if chunk_id not in chunks_by_id:
+                    continue
+                
+                m = chunks_by_id[chunk_id]
+                doc_id_key = m.get("doc_id")
+                chunk_idx = m.get("chunk_index")
+                
+                if doc_id_key is None or chunk_idx is None:
+                    continue
+                
+                if doc_id_key not in chunks_by_doc_and_index:
+                    continue
+                
+                doc_chunks = chunks_by_doc_and_index[doc_id_key]
+                
+                # Chunk anterior (chunk_index - 1)
+                prev_idx = chunk_idx - 1
+                if prev_idx >= 0 and prev_idx in doc_chunks:
+                    prev_chunk = doc_chunks[prev_idx]
+                    prev_id = prev_chunk.get("chunk_id")
+                    if prev_id and prev_id not in selected_ids:
+                        selected.append(prev_chunk)
+                        selected_ids.add(prev_id)
+                
+                # Chunk siguiente (chunk_index + 1)
+                next_idx = chunk_idx + 1
+                if next_idx in doc_chunks:
+                    next_chunk = doc_chunks[next_idx]
+                    next_id = next_chunk.get("chunk_id")
+                    if next_id and next_id not in selected_ids:
+                        selected.append(next_chunk)
+                        selected_ids.add(next_id)
+        
+        # Ordenar por doc_id y chunk_index para mantener orden lógico
+        selected.sort(key=lambda x: (x.get("doc_id", ""), x.get("chunk_index", 0)))
 
     elif doc_id:
         for m in meta:

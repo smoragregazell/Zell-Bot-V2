@@ -1,0 +1,300 @@
+Nombre del documento:
+Manual de Prevención de Riesgos Psicosociales
+
+Fecha de emisión: 27/03/2020
+Revisión: 00
+Código: M-RH-02
+	
+ELABORÓ
+REVISÓ
+APROBÓ
+
+Francisco Cameros
+Junta Directiva
+
+
+MANUAL DE PREVENCIÓN DE RIESGOS PSICOSOCIALES
+
+ÍNDICE
+
+1.	OBJETIVO	2
+2.	ALCANCE	2
+3.	DESARROLLO	2
+3.1.	Liderazgo	2
+3.2.	Cargas de trabajo	6
+3.3.	Control de trabajo	8
+3.4.	Apoyo Social	9
+3.5.	Reconocimiento en el trabajo	12
+3.6.	Prevención de violencia laboral	13
+3.7.	Información y comunicación	14
+3.8.	Capacitación y adiestramiento	15
+3.9.	Relación trabajo-familia	16
+3.11.	Desarrollo Social	18
+4.	CONTROL DE CAMBIOS	20
+
+
+
+
+
+1. OBJETIVO
+El presente Manual tiene como objetivo prevenir los factores de riesgo psicosocial en el centro de trabajo, así como la promoción de un entorno organizacional favorable y la prevención de la violencia laboral. Establece las acciones y/o programas a llevar a cabo para asegurar el cumplimiento de la Política de Prevención de Riesgos Psicosociales (PO-RH-09).
+2. ALCANCE
+El presente manual es aplicable para todos los colaboradores que laboran en Corporativo Zell.
+3. DESARROLLO
+Los aspectos que consideramos para el desarrollo de nuestras acciones y programas para prevenir los factores de riesgo psicosocial son los siguientes:
+3.1. Liderazgo
+3.1.1. Acciones para el manejo de conflictos en el trabajo.
+
+a) Se cuenta con un código de ética y conducta (PO-RH-06), el cual es difundido entre nuestros colaboradores, quienes además firman una carta compromiso para asegurar su correcto cumplimiento.
+b) Se cuenta con un comité de ética objetivo e imparcial que facilita la resolución de conflictos en el trabajo, el cual se establece en nuestra Política de Comunicación y Diálogo Abierto (PO-RH-04), conformado por: 
+* Agustín Yáñez Figueroa
+* Carolina Zataraín Villalpando
+* Héctor Noriega
+Quienes se reúnen al menos una vez al año, o dependiendo de la urgencia, para revisar las posibles denuncias por incumplimiento a nuestro Código de Ética y demás conflictos laborales.
+c) Existen canales de comunicación de hechos indebidos y protección de comunicación de los informantes, siendo el principal canal un buzón de ética en la página web de Zell (www.zell.mx/buzon-de-etica), en el cual los colaboradores puedan denunciar cualquier conflicto que se presente en el trabajo para posteriormente ser revisado y dar seguimiento por parte del Comité de Ética.
+
+3.1.2. Acciones para una correcta distribución de los tiempos de trabajo.
+
+a) Se cuenta con jornadas laborales de un máximo de 8 horas por día, y con los descansos que establece la Ley Federal del Trabajo. El tiempo de las jornadas laborales se establecen en los contratos de cada colaborador.
+
+3.1.3. Determinación de prioridades en el trabajo.
+
+a) Se establecen, difunden y firman descriptivos de puesto en los que se definen los objetivos y actividades principales de cada puesto.
+b) Las solicitudes de atención, tanto generadas por clientes como de manera interna a Zell, se priorizan según el tipo de falla (mayor, media, otros) para poder atender primero aquellas que pudieran afectar en mayor medida tanto nuestra operación como la de nuestros grupos de interés.
+c) Elaboración de planes y/o cronogramas de trabajo para la implementación tanto de proyectos internos a la organización, como de operaciones de nuestros clientes.
+
+
+
+3.1.4. Lineamientos para prohibir la discriminación y fomentar la equidad y el respeto
+
+a) Contamos con una Política de Reclutamiento, Selección y Contratación de Personal (PO-RH-01) que garantiza el respeto a los derechos humanos, la igualdad de oportunidades y evita la discriminación por raza, color, edad, sexo, estado civil, religión, orientación sexual, discapacidad, ideología, opiniones políticas o cualquier otra condición personal, física o social, en todo el proceso de reclutamiento, selección y contratación de personal; así como otros factores que fomentan condiciones laborales dignas y adecuadas.
+b) En nuestro Código de Ética (PO-RH-06), dentro del apartado 6.1 referente al Cumplimiento normativo, derechos humanos y valores éticos se establece como algunos de nuestros principios el respeto, integridad y relaciones dentro de la empresa; respeto a la diversidad y no discriminación, la promoción a la equidad de género, entre otros. Este Código de Ética se difunde internamente y, además, está disponible para nuestros grupos de interés en la página http://www.zellenterprise.com/wp-content/uploads/2020/02/PO-RH-06-Codigo-de-%C3%89tica-ESR.pdf 
+c) Contamos con una Política de Derechos Humanos (PO-RH-08) en la que se establece el rechazo a toda forma de discriminación, garantiza la igualdad de oportunidades y evita la discriminación por raza, color, edad, sexo, estado civil, religión, orientación sexual, discapacidad, ideología, opiniones políticas o cualquier otra condición personal, física o social en toda su operación.
+
+
+3.1.5. Mecanismos para fomentar la comunicación entre supervisores o gerentes y colaboradores, así como entre los colaboradores.
+
+a) Contamos con una Política de Comunicación y Diálogo Abierto (PO-RH-04) en la que se describen como algunos de los mecanismos de comunicación las reuniones entre colaboradores y directivos, sistema de quejas y sugerencias, sistema de reporte de incumplimiento al código de ética, correo electrónico y el principio de puertas abiertas para todos nuestros colaboradores.
+b) En el formato de Comunicación Interna – Externa (F-RH-05) se registra el tipo de comunicación que se maneja tanto interna como externamente, definiendo el tipo de información que queremos comunicar, emisores, receptores, medios de comunicación y la frecuencia con que se comunica.
+
+3.1.6. Establecer y difundir instrucciones claras a los colaboradores para la atención de los problemas que impiden o limitan el desarrollo de su trabajo, cuando éstos se presenten.
+
+a) En el Sistema Zell Tickets se registra la atención a los problemas presentados, en el que se documentan las acciones a realizar, dudas, consultas, resultados de implementaciones, etc.
+b) Se registran minutas de las juntas semanales que se realizan con todo el equipo, en las que se describen las situaciones presentadas, se proponen acciones o planes de acción, responsables y fechas compromiso de ejecución de las acciones.
+c) Se cuenta con pantallas en dos áreas de la empresa en la cual se muestra el decálogo de servicio que muestra las actividades a realizar en las solicitudes de atención y qué pasos seguir en caso de que el requerimiento no esté dentro de su alcance, conocimientos y/o habilidades:
+* Registra
+* Revisa
+* Replica
+* Busca Solución
+* Documenta Evidencia
+* Escala
+* Da Seguimiento
+* Prueba Solución
+* Entrega a cliente
+* Cierra o factura ticket
+
+3.1.7. Capacitación y sensibilización de los directivos, gerentes y supervisores para la prevención de los factores de riesgo psicosocial y la promoción de entornos organizacionales favorables. 
+
+a) Se realiza plática de sensibilización a directores y colaboradores el día 23 de agosto de 2019. Se registran los temas tratados, así como los participantes mediante una lista de asistencia.
+3.2. Cargas de trabajo
+3.2.1. Revisión y supervisión que la distribución de la carga de trabajo se realice de forma equitativa y considerando el número de trabajadores, actividades a desarrollar, alcance de la actividad y su capacitación.
+
+a) Se cuenta con jornadas laborales de un máximo de 8 horas por día, y con los descansos que establece la Ley Federal del Trabajo.
+b) Se distribuyen los clientes a atender por colaborador de manera equitativa, tomando en cuenta criterios como el estatus del cliente (operando o implementación), nivel de atención requerido, carga de trabajo, etc.
+
+3.2.2. Actividades para planificar el trabajo, de manera que se tengan las pausas o periodos necesarios de descanso, rotación de tareas y otras medidas necesarias para evitar ritmos de trabajo acelerados.
+
+a) Se otorga la oportunidad de tomar media día libre al mes, el cual se establece en el Manual de Inducción (M-RH-01) que se entrega al personal de nuevo ingreso en el apartado 3.6 ‘’Medio día al mes de disfrute libre’’.
+b) Se otorga la oportunidad de tomar medio día libre en tu cumpleaños, el cual se establece en el manual de Inducción (M-RH-01) en el apartado 3.7 ‘’Medio día libre por tu cumpleaños’’.
+c) Se permite tomar descansos breves cuando se crea necesario, sin necesidad de solicitar un permiso especial (ir al baño, tomar café, agua, pararse de su lugar, etc.).
+
+3.2.3. Procedimientos que definan claramente las tareas y responsabilidades.
+
+a) Se establece y difunden los descriptivos de puesto de cada colaborador, donde se definen sus objetivos, responsabilidades, tareas y actividades a realizar en su puesto.
+b) Se cuenta con procedimientos internos del área (Procedimiento de Solicitud de Atención P-OPR-01).
+c) En el área de desarrollo se reciben los requerimientos vía correo electrónico, llamadas, juntas, y plataformas de apoyo como los es Teams. Para cualquier duda sobre sus tareas y responsabilidades, se puede contactar a cualquiera de los involucrados en el proyecto, bajo el principio de puertas abiertas.
+3.3. Control de trabajo
+3.3.1. Actividades para involucrar a los colaboradores en la toma de decisiones sobre la organización de su trabajo; para que participen en la mejora de las condiciones de trabajo.
+
+a) En la Política de Comunicación y Diálogo Abierto (PO-RH-04) se establece el realizar juntas semanales, en las que se tocan los temas más relevantes, definidas como espacios de información, discusión y decisión sobre las actividades realizadas o situaciones presentadas durante la semana.
+b) Se realizan sesiones de lluvia de ideas y encuestas con todos los colaboradores para conocer su opinión e interés en la planificación de los siguientes programas de Responsabilidad Social Empresarial.
+
+3.3.2. Acciones para acordar y mejorar el margen de libertad y control sobre su trabajo por parte de los colaboradores y jefes, impulsando que éstos desarrollen nuevas competencias o habilidades.
+
+a) En el Sistema Zell Tickets se asignan las solicitudes de atención a cada persona, en donde se encargará de realizar las actividades que crea necesarias para un correcto seguimiento de la solicitud. Cada colaborador tiene libertad elección en el tratamiento que se la dará al requerimiento, otorgando propuestas de solución.
+b) Se da la oportunidad de proponer planes de trabajo y distribución de trabajo, ya que cada colaborador decide el seguimiento y tratamiento que le dará a sus pendientes.
+c) Posibilidad de solicitar capacitaciones relacionadas a las actividades que realiza en su día a día laboral.
+3.3.3. Reuniones para abordar las áreas de oportunidad de mejora, a efecto de atender los problemas en el lugar de trabajo y determinar sus soluciones.
+
+a) En las reuniones semanales, se proponen planes de acción y métodos de solución entre todos los participantes para los problemas o situaciones identificadas durante la semana.
+b) Se cuenta con el formato de Mejora Continua (F-SGC-30) en el que se registran las mejoras propuestas al SGC.
+c) En las auditorías semestrales y revisiones por la dirección de nuestro Sistema de Gestión de Calidad, se proponen oportunidades de mejora en los procesos y se toman acciones sobre los resultados.
+3.4. Apoyo Social
+3.4.1. Establecer relaciones entre colaboradores, supervisores, directores, etc. para que puedan obtener apoyo los unos de los otros. 
+
+a) En nuestra Política de Comunicación y Diálogo Abierto (PO-RH-04) se establecen juntas semanales en las que participan tanto directivos como colaboradores. Son definidas como espacios de información, discusión y decisión sobre las actividades realizadas o situaciones presentadas durante la semana.
+b) Cada cliente tiene asignado mínimo dos Especialistas de Producto, esto con la finalidad de mejorar el trabajo en equipo y comunicación entre personas, aprendizaje, crecimiento y libertad de toma de decisiones.
+c) Se realizan dinámicas de Team Building / Trabajo en Equipo, con el objetivo de mejorar las relaciones laborales, tanto a nivel equipo como por áreas, de manera anual.
+d) Acciones de voluntariado corporativo en las que se impulsa el apoyo entre colaboradores, directores, etc. (Voluntariado para grupos vulnerables, Reforestaciones) al menos una vez al año.
+e) Principio de puertas abiertas, en las que los colaboradores pueden concertar reuniones/platicar con directivos y compañeros sin necesidad de solicitar una cita o permiso especial.
+f) Grupo de WhatsApp y grupo de Teams entre colaboradores en el que, además de tratar temas laborales, se utiliza para organizar desayunos en el trabajo, dudas, etc. lo cual mejora las relaciones personales, ameniza el ambiente laboral y facilita la comunicación.
+g) Se realiza una convivencia de cierre de semana, en donde cada viernes, una hora antes de la salida, se otorgan snacks a los colaboradores por parte de la empresa y se incentiva la convivencia.
+h) Como parte de nuestro programa de valores, mensualmente se realizan actividades de integración en las que se organizan concursos donde los colaboradores pueden ganar premios únicos.
+
+3.4.2. Realizar reuniones periódicas de seguimiento a las actividades establecidas para el apoyo social.
+
+a) En nuestra Política de Comunicación y Diálogo Abierto (PO-RH-04) se establecen juntas semanales en las que participan tanto directivos como colaboradores. Son definidas como espacios de información, discusión y decisión sobre las actividades realizadas o situaciones presentadas durante la semana
+b) Contrato de consultoría en materia de Responsabilidad Social, donde se da seguimiento a las actividades planteadas en nuestros programas de RSE, incluyendo aquellas relacionadas con el apoyo social, vinculación con la comunidad, calidad de vida, etc.
+
+3.4.3. Promover la ayuda mutua y el intercambio de conocimientos y experiencias entre los trabajadores.
+
+a) En las reuniones semanales, se proponen planes de acción y métodos de solución entre todos los participantes para los problemas o situaciones identificadas durante la semana.
+b) Cada cliente tiene asignado mínimo dos Especialistas de Producto, esto con la finalidad de mejorar el trabajo en equipo, comunicación y apoyo entre personas.
+c) Se realizan dinámicas de Team Building / Trabajo en Equipo con el objetivo de mejorar las relaciones laborales, tanto a nivel equipo como por áreas, realizándose de manera anual.
+i) Se realiza una convivencia de cierre de semana, en donde cada viernes, una hora antes de la salida, se otorgan snacks a los colaboradores por parte de la empresa.
+d) Se realiza un evento de fin de año en el que se invita a todos los colaboradores.
+e) Como parte de nuestro programa de valores, mensualmente se realizan actividades de integración en las que se organizan concursos donde los colaboradores pueden ganar premios únicos.
+
+3.4.4. Contribuir al fomento de las actividades culturales y del deporte entre nuestros colaboradores y proporcionarles los equipos y útiles indispensables.
+
+a) Se da la oportunidad de recibir apoyos para un evento deportivo oficial y/o público al año.
+b) Se fomenta la lectura al regalar libros a nuestros colaboradores. Dependiendo del tipo de libro (contenido, tamaño, etc.) se realizan reuniones voluntarias para comentar lo leído y aprendido entre todos (club de lectura).
+c) Se fomenta el uso de medios de transporte alternativos como lo es la bicicleta por medio de boletines informativos. 
+3.5. Reconocimiento en el trabajo
+3.5.1. Reconocer el desempeño sobresaliente de nuestros colaboradores.  
+
+a) En el proceso de Atención a Clientes se establecen objetivos de calidad que generan reportes semanales, los cuales se difunden entre todos los involucrados. Al cumplir con el 100% de un objetivo, se felicita por medio de correo electrónico y se refleja el porcentaje al finalizar la semana en pantallas de televisión instaladas en dos áreas de la empresa.
+b) Boletines de clases otorgadas por colaboradores y directivos en WeMan Connect.
+c) Agradecimiento por participación en voluntariado de Nariz Roja.
+d) Reconocimiento de logros laborales y/o académicos de los colaboradores destacados y se difunde por correo electrónico a toda la empresa.
+
+3.5.2. Difundir los logros de los colaboradores sobresalientes. 
+
+a) Los logros se difunden por correo electrónico entre todas las personas que laboran en Corporativo Zell.
+
+3.5.3. Expresar al trabajador sus posibilidades de desarrollo. 
+
+a) Se cuenta con una Política de Capacitación (PO-RH-02) en donde se establecen las oportunidades de desarrollo laboral al ofrecer capacitación de manera anual.
+b) Se implementa una Detección de Necesidades de Capacitación en la que se realizan encuestas donde cada colaborador puede opinar acerca de qué capacitaciones le gustaría tomar para desarrollarse mejor en su ámbito laboral.
+3.6. Prevención de violencia laboral
+3.6.1. Difundir información para sensibilizar sobre la violencia laboral.
+
+a) Se realiza plática de sensibilización a directores y colaboradores el día 23 de agosto de 2019. Se registran los temas tratados, entre los que incluye información acerca de la violencia laboral, y se registran los participantes en una lista de asistencia.
+
+3.6.2. Establecer procedimientos de actuación y seguimiento para tratar problemas relacionados con la violencia laboral.
+
+a) El comité de ética es el encargado de revisar los casos denunciados por violencia laboral (entre otros), además de dar seguimiento y proponer acciones para su resolución y/o prevención.
+
+3.6.3. Informar sobre la forma en que se deben denunciar actos de violencia laboral.
+
+a) Se realiza plática de sensibilización a directores y colaboradores el día 23 de agosto de 2019. Se registran los temas tratados, entre los que incluye información acerca de la violencia laboral, formas de denuncia (buzón ético) y se registran los participantes en una lista de asistencia.
+b) Se tiene como principal canal de denuncia de actos de violencia laboral (entre muchos otros) un buzón de ética en la página web de Zell (http://www.zellenterprise.com/about/buzon-de-etica), en el cual los colaboradores puedan denunciar cualquier conflicto que se presente en el trabajo para posteriormente ser revisado y dar seguimiento por parte del Comité Ética.
+c) Se firma carta compromiso de código de ética en donde se establecen los canales de denuncia ante posibles actos que atenten contra nuestro código.
+3.7. Información y comunicación
+3.7.1. Informar los cambios en la organización o las condiciones de trabajo.
+
+a) Cada nuevo cambio en los procedimientos o cambios de la organización se difunden por correo electrónico, actualización de carpetas compartidas en la nube, juntas o reuniones, documentos firmados, etc.
+
+3.7.2. Que los trabajadores puedan expresar sus opiniones sobre problemas o mejoras.
+
+a) En nuestra Política de Comunicación y Diálogo Abierto (F-RH-04) se establecen sistemas de quejas y sugerencias (correo electrónico, de manera verbal).
+b) Se tiene el procedimiento de quejas y denuncias (P-RH-05) que tiene como objetivo establecer los pasos a seguir y los criterios a observar para la presentación de una queja o denuncia ante el Comité de Ética.
+
+
+
+3.8. Capacitación y adiestramiento
+3.8.1. Analizar la relación capacitación-tareas encomendadas.
+
+a) Se realiza Detección de Necesidades de Capacitación tomando en cuenta los descriptivos de puesto de cada colaborador, con el fin de empatar si la competencia que se pide, en realidad se cumple.
+
+3.8.2. Dar oportunidad a los trabajadores para señalar sus necesidades de capacitación conforme a sus actividades.
+
+a) Una de las herramientas utilizadas para la Detección de Necesidades de Capacitación es la entrevista con el colaborador, esto con el fin de conocer las necesidades que tiene dentro de la empresa, las actividades que realiza y su crecimiento personal y/ laboral. De esta manera, cada uno identifica en qué área le falta más conocimiento y en qué le gustaría capacitarse.
+
+3.8.3. Realizar una detección de necesidades de capacitación al menos cada dos años e integrar su resultado en el programa de capacitación.
+
+a) Se realiza Detección de Necesidades de Capacitación (DNC) de forma anual. Se genera un informe con los resultados, del cual resultan las capacitaciones a otorgar durante el periodo anual, las cuales se registran en el Plan de Capacitación Anual (F-RH-09) y se difunden entre los involucrados.
+3.9. Relación trabajo-familia
+3.9.1. Acciones para involucramiento de los trabajadores en la definición de los horarios de trabajo cuando las condiciones del trabajo lo permiten
+
+a) En el Manual de Inducción (M-RH-01) se establecen las prestaciones con relación a horarios que otorga Corporativo Zell. 
+b) Se otorga la oportunidad de tomar media día libre al mes, el cual se establece en el Manual de Inducción (M-RH-01) que se entrega al personal de nuevo ingreso en el apartado 3.6 ‘’Medio día al mes de disfrute libre’’.
+c) Se otorga la oportunidad de tomar medio día libre en tu cumpleaños, el cual se establece en el manual de Inducción (M-RH-01) en el apartado 3.7 ‘’Medio día libre por tu cumpleaños’’.
+
+3.9.2. Lineamientos para establecer medidas y límites que eviten jornadas de trabajo superiores a las previstas en la LFT
+
+a) En los contratos se establece el horario de trabajo, en donde se definen jornadas de no más de 8 horas al día, conforme a lo previsto en la Ley Federal de Trabajo.
+
+3.9.3. Apoyo a los trabajadores de manera que puedan atender emergencias familiares, mismas que el colaborador tenga que comprobar.
+a) Se otorga la oportunidad de tomar media día libre al mes, el cual se establece en el Manual de Inducción (M-RH-02) que se entrega al personal de nuevo ingreso en el apartado 3.6 ‘’Medio día al mes de disfrute libre’’.
+b) En el Manual de Inducción (M-RH-01) se establecen las prestaciones con relación a las vacaciones y prestaciones especiales que otorga Corporativo Zell.
+c) Se otorgan 2 días de descanso con goce de sueldo al cumplir aniversario en Zell.
+d) Tienes la oportunidad de solicitar días de vacaciones proporcionales al total de lo que te corresponda en el año. De acuerdo a lo establecido en nuestra Política de Vacaciones (PO-RH-10).
+e) Adicional a los días de vacaciones que te corresponden anualmente, tienes el derecho de adquirir 5 días de descanso sin goce de sueldo. De acuerdo con lo establecido en nuestra Política de Vacaciones (PO-RH-10).
+
+3.9.4. Promoción de actividades de integración familiar en el trabajo
+
+a) Dentro de nuestro programa de Responsabilidad Social, damos la oportunidad de que se pueda invitar a sus familiares en algunos de los eventos, como lo fue el Taller de Huertos Urbanos y la jornada de reforestación.
+
+3.10. Calidad de Vida
+
+3.10.1. Aumentos de vacaciones y prestaciones especiales
+
+a) En el Manual de Inducción (M-RH-01) se establecen las prestaciones con relación a las vacaciones y prestaciones especiales que otorga Corporativo Zell.
+b) Se establece un aumento de 2 días de descanso con goce de sueldo más a las vacaciones establecidas por ley, como parte del reconocimiento por aniversario en Zell.
+c) Tienes la oportunidad de solicitar días de vacaciones proporcionales al total de lo que te corresponda en el año. De acuerdo a lo establecido en nuestra Política de Vacaciones (PO-RH-10).
+d) Adicional a los días de vacaciones que te corresponden anualmente, tienes el derecho de adquirir 5 días laborales de vacaciones, sin goce de sueldo (las vacaciones no podrán acumularse más allá de 10 días hábiles para la suma de vacaciones o permisos sin goce de salario).
+e) Una vez que se adquiere la planta, se le otorga al colaborador un seguro de vida por un monto de $1,000,000 de pesos.
+
+3.10.2. Apoyo a madres y padres trabajadores
+
+a) En el Manual de Inducción (M-RH-01) se establecen las prestaciones especiales para madres y padres trabajadores que otorga Corporativo Zell. 
+b) Se otorga un permiso de paternidad de ocho días laborales (tres días más a los de ley) con goce de sueldo a los hombres trabajadores, por el nacimiento de sus hijos y, de igual manera, en el caso de adopción de un infante.
+3.11. Desarrollo Social
+3.11.1. Voluntariado Corporativo
+
+a) Al menos una vez al año, se realizan actividades de voluntariado corporativo con el fin de impulsar el trabajo en equipo, convivencia y realizar acciones de apoyo a la comunidad. 
+b) Apoyo a niños con cáncer en asociación Nariz Roja.
+c) Campañas de reforestación.
+d) Se imparten clases gratis y de manera voluntaria por parte de colaboradores y directivos en el programa de WeMan Connect.
+e) Apoyos económicos a mujeres jóvenes del Programa WeMan Connect.
+f) Apoyo con víveres a damnificados por desastres naturales al sumarnos como punto de recolección de víveres en la oficina cuando ocurra.
+g) Se implementa voluntariado corporativo virtual por motivo de pandemia (vídeos educativos para niños, recolección de equipos electrónicos para personas que lo necesiten).
+
+3.11.2. Team Building
+
+a) Se realizan dinámicas de Team Building / Trabajo en Equipo, con el objetivo de mejorar las relaciones laborales, tanto a nivel equipo como por áreas, realizándose de manera anual.
+
+3.11.3. Educación ambiental
+
+a) Se impulsa el desarrollo de una cultura y educación ambiental entre todos nuestros colaboradores al otorgar cursos, pláticas, talleres y/o dinámicas para concientizar sobre la importancia del cuidado del medio ambiente.
+b) Taller de huertos urbanos.
+c) Sensibilizaciones de medio ambiente y cambio climático.
+d) Taller de separación de residuos.
+e) Política de Medio Ambiente (PO-MA-01).
+f) Manual de separación de residuos (M-MA-01).
+g) Boletines de Medio Ambiente.
+h) Ecochallenge
+i) Campañas de reforestación.
+
+
+
+
+3.11.4. Fomento de la educación e inclusión de grupos vulnerables
+
+a) Se impulsa el apoyo a grupos vulnerables dentro de nuestro ámbito de influencia.
+b) Compartimos los conocimientos de nuestros colaboradores al impartir clases de programación gratuitas y voluntarias por parte de colaboradores y directivos en WeMan Connect, iniciativa orientada a apoyar la inclusión digital de mujeres jóvenes.
+c) Apoyos financieros para mejorar la educación e inclusión tecnológica de mujeres que completaron satisfactoriamente el curso de WeMan Connect, además de regalos de felicitación en la clausura del programa.
+d) Análisis de programas de inversión en la comunidad.
+e) Apoyo con desayunos a niños con cáncer de la Asociación Nariz Roja.
+f) Voluntariado en albergue de niños con cáncer de la Asociación Nariz Roja, jugando y platicando con pacientes y familiares y apoyando en actividades de encargadas del lugar (logística, registro de entradas, entrega de desayunos, etc.).
+
+4. CONTROL DE CAMBIOS
+Revisión: 00
+Cambio: Documento de nueva creación
+Fecha: 27/03/2020
+
+
+
+
+

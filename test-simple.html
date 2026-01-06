@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Widget V2 - Test Simple</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f0f0f0;
+        }
+        .header {
+            text-align: center;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .header h1 {
+            margin: 0;
+            color: #e5a500;
+        }
+        .info {
+            background: #fff3cd;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 4px solid #e5a500;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🤖 Widget V2 - Test Simple</h1>
+        <p>Busca el botón <strong>"IA"</strong> en la esquina inferior izquierda 👇</p>
+    </div>
+
+    <div class="info">
+        <strong>📌 Pasos:</strong>
+        <ol>
+            <li>Asegúrate de que tu backend esté corriendo en <code>http://localhost:5050</code></li>
+            <li>Busca el botón <strong>"IA"</strong> en la esquina inferior izquierda</li>
+            <li>Haz clic para abrir el chat</li>
+            <li>¡Empieza a chatear!</li>
+        </ol>
+        <p><strong>💡 Tip:</strong> Si el backend está en otra URL, edita <code>chat-widget-v2.js</code> línea 12</p>
+    </div>
+
+    <!-- Configurar variables antes de cargar el widget -->
+    <script>
+        // Configuración automática para desarrollo
+        window.BACKEND_URL = 'http://localhost:5050';
+        window.vUserName = 'Usuario Test';
+        window.zToken = 'test-token-dev'; // Para desarrollo con SKIP_AUTH=1
+        
+        console.log('✅ Configuración cargada:');
+        console.log('  - Backend:', window.BACKEND_URL);
+        console.log('  - Usuario:', window.vUserName);
+        console.log('  - Token:', window.zToken ? 'Configurado' : 'No configurado');
+    </script>
+
+    <!-- Cargar el widget mock -->
+    <script src="chat-widget-mock.js"></script>
+</body>
+</html>
+
