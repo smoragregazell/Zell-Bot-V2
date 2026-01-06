@@ -1,0 +1,48 @@
+timestamp,userName,conversation_id,user_message,response,response_id,rounds_used,had_previous_context,extra_info
+2026-01-05 13:51:54,Santiago,test1,"Busca en tickets si se menciona el problema 'reportaron que en reporte de  grado de riesgo, en la columna vPEP y vBLOCKED aparecen todos los registros  como pep, aunque no lo son.'","Encontré tickets que coinciden con ese problema. Resumen corto (top 2):
+
+- Ticket 24948 — ""Reporte de grado de riesgo de los clientes""
+  - Por qué coincide: comentario de pruebas indica que ""etvPEP"" y ""etvBlocked"" aparecen con ""SI"" para todos los registros aunque no tengan coincidencias en listas ni estén en el catálogo de sujetos.
+  - Evidencia (citas):
+    - ""para todos los registros aparecen las columnas etvPEP y etvBlocked con opción SI, pero no tienen registros en listas.""
+    - ""Además, ejecuté la matriz de riesgo y no se visualiza el resultado en la última columna (etvOpRisk).""
+
+- Ticket 35700 — ""Columna nivel de grado de riesgo en reporte""
+  - Por qué coincide: cliente reportó solicitudes marcadas como PEP/PEP variable en el reporte; equipo detectó que había una configuración/matriz incorrecta y que la columna PEP no funciona con base en un dato variable.
+  - Evidencia (citas):
+    - ""El cliente mandó correo que los usuarios los tenia marcados como PEP, pero al buscarlos en el ",resp_05232ecab4a6230300695c1650834c8195ba102510c8103d92,4,No,Success
+2026-01-05 13:54:15,Santiago,test1,Busca tambien lo mismo en reuniones semanales,"Resumen (reuniones semanales):
+
+- 2025-07-04 | Tema #2 — Problema: en GOC reportaron que en el reporte de grado de riesgo las columnas vPEP (y vBLOCKED/etvPEP/etvBlocked en tickets relacionados) estaban marcando registros como PEP aunque no lo eran; además se detectó un caso de PEP basado en dato variable.  
+  Solución/acuerdo: con ayuda de Paco se corrigió la configuración; quedó pendiente seguimiento del cliente afectado.
+
+Evidencia (Minuta 2025-07-04):
+- ""En GOC reportaron que en reporte de grado de riesgo, en la columna vPEP y""  
+- ""Con ayuda de Paco se corrigió, pero adicional reportaron que había un cliente""
+
+¿Deseas que busque la acción/seguimiento asignado en esa minuta o que extraiga los nombres (iniciales) de los responsables para dar seguimiento?",resp_05232ecab4a6230300695c16db7f8c8195b8288773ba3c5aa4,5,Yes,Success
+2026-01-05 17:46:47,Santiago,test3,que tickets se generaron en diciembre por JAVIER?,"Se encontraron 100 tickets generados en diciembre detectados por JAVIER. Mostrando top 25 más recientes:
+
+1) Id: 36814 | Cliente: EXI | Título: Fechas de primer pago vencidos | Fecha: 23/12/2025 | DetectadoPor: JAVIER | Estatus: Validacion Cliente  
+2) Id: 36815 | Cliente: CRZ | Título: Eventos para contabilizar pagos a vendedores | Fecha: 23/12/2025 | DetectadoPor: JAVIER | Estatus: Espera Información  
+3) Id: 36816 | Cliente: CRZ | Título: Módulo de promotor externo 2da fase | Fecha: 23/12/2025 | DetectadoPor: JAVIER | Estatus: Cancelado  
+4) Id: 36817 | Cliente: CRQ | Título: Acompañamiento PLD | Fecha: 23/12/2025 | DetectadoPor: JAVIER | Estatus: Facturación Parcial  
+5) Id: 36821 | Cliente: EXI | Título: Modificar maestro de solicitudes | Fecha: 23/12/2025 | DetectadoPor: JAVIER | Estatus: Por Cotizar  
+6) Id: 36800 | Cliente: EXI | Título: Doble dispersión pago a proveedor solicitud 304565 | Fecha: 19/12/2025 | DetectadoPor: JAVIER | Estatus: Cerrado  
+7) Id: 36798 | Cliente: EXI",resp_0138c7442e78a5af00695c4d4d928481939d44a28f3abbda5d,2,No,Success
+2026-01-05 17:49:25,Santiago,test3,traeme el ticket 36816,"Busqué el ticket y lo recuperé. Detalle:
+
+- Id: 36816  
+- Cliente: CRZ  
+- Título: Módulo de promotor externo 2da fase  
+- Fecha creado: 23/12/2025  
+- Detectado por: JAVIER  
+- Estatus: Cancelado
+
+Descripción (resumen): requerimiento para ruta/módulo de promotor externo con etapas, bitácora de devoluciones y log de cambios; alta automática en catálogo de promotores y reglas de id/duplicados/alineación con catálogo de personas.
+
+Evidencia (extractos):
+- ""Se debe tener una ruta para el módulo de promotor externo tal cual, como la ruta de solicitudes, en la cual se pueda asignar varias etapas...""  
+- Comentario (01/05/2026, JAVIER MORA): ""Se modificará alcance, daré de alta nuevo ticket con el nuevo requerimiento.""
+
+¿Quieres que abra el ticket en la UI, exporte los comentarios completos o cree el nuevo ticket con el alcance modificado?",resp_0138c7442e78a5af00695c4dfa1ff8819397f6c7eb00ea43cc,3,Yes,Success

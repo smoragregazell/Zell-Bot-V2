@@ -11,8 +11,6 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from utils.logging_config import setup_logging
 from endpoints.classifier import router as classifier_router
-from Tools.iso_tool import router as iso_router
-from Tools.continuation_tool import router as continuation_router
 import Tools.compararticket_tool
 from endpoints.session_token import router as session_router
 from endpoints.logsdownload import router as logs_router
@@ -72,8 +70,6 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 # Routers
 app.include_router(classifier_router)
-app.include_router(iso_router)
-app.include_router(continuation_router)
 app.include_router(session_router)
 app.include_router(logs_router)
 app.include_router(chat_v2_router)

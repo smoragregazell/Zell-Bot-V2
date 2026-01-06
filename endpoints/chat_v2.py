@@ -7,11 +7,14 @@
 import os
 import json
 import time
+import csv
+import inspect
 from typing import Any, Dict, List, Optional
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from openai import OpenAI
 
 # --- Auth (optional skip in local) ---
 from utils.token_verifier import verificar_token
@@ -33,10 +36,22 @@ from Tools.semantic_tool import (
 # --- Docs RAG ---
 from Tools.docs_tool import search_docs, get_doc_context
 
+# --- Query tool (SQL queries) ---
+from Tools.query_tool import (
+    generate_sql_query,
+    fetch_query_results,
+)
+from utils.contextManager.context_handler import get_interaction_id
+
 router = APIRouter()
 
 TRACE_V2 = os.getenv("TRACE_V2", "0") == "1"
 SKIP_AUTH = os.getenv("SKIP_AUTH", "0") == "1"
+
+# --- Conversational context storage ---
+# Almacena el último response_id por conversation_id para mantener contexto
+# Formato: {conversation_id: {"last_response_id": "resp_xxx", "updated_at": timestamp}}
+_conversation_response_ids: Dict[str, Dict[str, Any]] = {}
 
 
 def tr(msg: str) -> None:
@@ -44,12 +59,99 @@ def tr(msg: str) -> None:
         print(f"[V2-TRACE] {msg}", flush=True)
 
 
-# --- OpenAI client ---
-client = OpenAI(
-    api_key=os.getenv("OPENAI_API_KEY_V2")
-    or os.getenv("OPENAI_API_KEY")
-    or os.getenv("OPENAI_API_KEY_Clasificador")
-)
+def get_last_response_id(conversation_id: str) -> Optional[str]:
+    """Obtiene el último response_id guardado para esta conversación."""
+    entry = _conversation_response_ids.get(conversation_id)
+    if entry:
+        return entry.get("last_response_id")
+    return None
+
+
+def save_last_response_id(conversation_id: str, response_id: str) -> None:
+    """Guarda el último response_id para esta conversación."""
+    _conversation_response_ids[conversation_id] = {
+        "last_response_id": response_id,
+        "updated_at": time.time(),
+    }
+    tr(f"Saved last_response_id={response_id} for conv_id={conversation_id}")
+
+
+def clear_conversation_context(conversation_id: str) -> None:
+    """Limpia el contexto de una conversación (para empezar de nuevo)."""
+    _conversation_response_ids.pop(conversation_id, None)
+    tr(f"Cleared context for conv_id={conversation_id}")
+
+
+# --- Logging simple a CSV ---
+CHAT_V2_LOG_FILE = os.path.join("logs", "chat_v2_interactions.csv")
+
+
+def ensure_log_file_exists():
+    """Asegura que el archivo de log existe con headers."""
+    os.makedirs("logs", exist_ok=True)
+    if not os.path.exists(CHAT_V2_LOG_FILE) or os.path.getsize(CHAT_V2_LOG_FILE) == 0:
+        with open(CHAT_V2_LOG_FILE, "w", newline="", encoding="utf-8") as f:
+            writer = csv.writer(f)
+            writer.writerow([
+                "timestamp",
+                "userName",
+                "conversation_id",
+                "user_message",
+                "response",
+                "response_id",
+                "rounds_used",
+                "had_previous_context",
+                "extra_info"
+            ])
+
+
+def log_chat_v2_interaction(
+    userName: str,
+    conversation_id: str,
+    user_message: str,
+    response: str,
+    response_id: Optional[str] = None,
+    rounds_used: int = 0,
+    had_previous_context: bool = False,
+    extra_info: str = ""
+):
+    """Log simple de interacciones de chat_v2 a CSV."""
+    try:
+        ensure_log_file_exists()
+        timestamp = datetime.now(ZoneInfo("America/Mexico_City")).strftime("%Y-%m-%d %H:%M:%S")
+        
+        # Usar modo append con manejo de errores más robusto
+        try:
+            with open(CHAT_V2_LOG_FILE, "a", newline="", encoding="utf-8") as f:
+                writer = csv.writer(f)
+                writer.writerow([
+                    timestamp,
+                    userName or "N/A",
+                    conversation_id or "",  # Asegurar que no sea None
+                    user_message[:500] if len(user_message) > 500 else user_message,  # Limitar tamaño
+                    response[:1000] if len(response) > 1000 else response,  # Limitar tamaño
+                    response_id or "",
+                    rounds_used,
+                    "Yes" if had_previous_context else "No",
+                    extra_info
+                ])
+                f.flush()  # Forzar escritura inmediata
+            tr(f"Logged interaction to {CHAT_V2_LOG_FILE}")
+        except PermissionError as pe:
+            tr(f"Permission denied writing to CSV (file may be open): {pe}")
+        except IOError as ioe:
+            tr(f"IO error writing to CSV: {ioe}")
+    except Exception as e:
+        tr(f"Error logging to CSV: {e}")
+        import traceback
+        tr(f"Traceback: {traceback.format_exc()}")
+
+
+# --- OpenAI client (usando ai_calls centralizado) ---
+from utils.ai_calls import responses_create, get_openai_client
+
+# Cliente para Responses API (mantener compatibilidad)
+client = get_openai_client(tool=None)
 
 # Load ticket FAISS once
 try:
@@ -110,7 +212,13 @@ TOOLS: List[Dict[str, Any]] = [
                 },
                 "universe": {
                     "type": "string",
-                    "description": "Universo de documentos cuando scope=docs (ej: policies_iso, meetings_weekly, manuals_system).",
+                    "description": (
+                        "Universo de documentos cuando scope=docs. "
+                        "Opciones: 'policies_iso' (políticas/procedimientos ISO), "
+                        "'meetings_weekly' (minutas de reuniones semanales con temas tratados, asistentes, fechas), "
+                        "u otros universos disponibles. "
+                        "Usa 'meetings_weekly' cuando el usuario pregunte sobre reuniones, temas tratados en juntas, asistentes a reuniones, o decisiones de reuniones."
+                    ),
                     "default": "policies_iso",
                 },
                 "top_k": {"type": "integer", "default": 8},
@@ -121,20 +229,52 @@ TOOLS: List[Dict[str, Any]] = [
     {
         "type": "function",
         "name": "get_item",
-        "description": "Trae detalle de un item (ticket, quote, doc).",
+        "description": (
+            "Trae detalle de un item (ticket, quote, doc). "
+            "Úsalo DIRECTAMENTE cuando el usuario pida un ticket específico por número/ID "
+            "(ej: 'traeme el ticket 36816', 'ticket #12345', 'muéstrame el ticket 5000'). "
+            "NO uses search_knowledge primero si el usuario especifica un número de ticket."
+        ),
         "parameters": {
             "type": "object",
             "properties": {
                 "type": {"type": "string", "enum": ["ticket", "quote", "doc"]},
-                "id": {"type": "string"},
+                "id": {"type": "string", "description": "ID del item. Para tickets, usa el número del ticket (ej: '36816', '12345')."},
                 "include_comments": {"type": "boolean", "default": True},
                 "universe": {
                     "type": "string",
-                    "description": "Universo de documentos cuando type=doc (ej: policies_iso, meetings_weekly, manuals_system).",
+                    "description": (
+                        "Universo de documentos cuando type=doc. "
+                        "Debe coincidir con el universo usado en search_knowledge para obtener el chunk_id. "
+                        "Opciones: 'policies_iso', 'meetings_weekly', u otros."
+                    ),
                     "default": "policies_iso",
                 },
             },
             "required": ["type", "id"],
+        },
+    },
+    {
+        "type": "function",
+        "name": "query_tickets",
+        "description": (
+            "Ejecuta consultas SQL sobre tickets para responder preguntas cuantitativas o de filtrado. "
+            "Úsalo cuando el usuario pregunte: cuántos tickets, tickets abiertos/cerrados en un período, "
+            "tickets por persona (Javier, Alfredo, etc.), tickets por cliente, tickets por estatus/categoría, "
+            "tickets con filtros de fecha (diciembre, último mes, etc.), o cualquier pregunta que requiera "
+            "contar, agregar o filtrar tickets con criterios específicos. "
+            "Ejemplos: '¿Cuántos tickets se abrieron en diciembre por Javier?', "
+            "'Tickets activos de Exitus', 'Tickets en estatus Desarrollo'."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "user_question": {
+                    "type": "string",
+                    "description": "La pregunta del usuario sobre tickets que requiere una consulta SQL.",
+                },
+            },
+            "required": ["user_question"],
         },
     },
 ]
@@ -238,24 +378,51 @@ def tool_search_knowledge(args: Dict[str, Any], conversation_id: str) -> Dict[st
                 tr(f"DOCS hits={len(dhits)} universe={universe}")
 
                 for h in dhits:
+                    # Construir snippet según tipo de documento
+                    snippet_parts = []
+                    if h.get("title"):
+                        snippet_parts.append(h.get("title"))
+                    if h.get("section"):
+                        snippet_parts.append(h.get("section"))
+                    # Para meetings, agregar info adicional
+                    if h.get("meeting_date"):
+                        snippet_parts.append(f"Reunión: {h.get('meeting_date')}")
+                    if h.get("row_key") and "#tema-" in str(h.get("row_key")):
+                        tema_num = str(h.get("row_key")).split("#tema-")[-1]
+                        snippet_parts.append(f"Tema #{tema_num}")
+                    
+                    snippet = " :: ".join(snippet_parts).strip()[:260]
+                    
+                    metadata = {
+                        "doc_id": h.get("doc_id"),
+                        "title": h.get("title"),
+                        "section": h.get("section"),
+                        "source_path": h.get("source_path"),
+                        "universe": universe,
+                        "codigo": h.get("codigo"),
+                        "fecha_emision": h.get("fecha_emision"),
+                        "revision": h.get("revision"),
+                        "estatus": h.get("estatus"),
+                    }
+                    
+                    # Metadata específica para meetings
+                    if h.get("meeting_date"):
+                        metadata["meeting_date"] = h.get("meeting_date")
+                        metadata["meeting_start"] = h.get("meeting_start")
+                        metadata["meeting_end"] = h.get("meeting_end")
+                    if h.get("row_key"):
+                        metadata["row_key"] = h.get("row_key")
+                    if h.get("block_kind"):
+                        metadata["block_kind"] = h.get("block_kind")
+                    
                     hits.append(
                         {
                             "type": "doc",
                             "id": str(h.get("chunk_id")),  # id = chunk_id
                             "score": float(h.get("score", 0.0)),
                             "method": "docs_semantic",
-                            "snippet": f'{h.get("title","")} :: {h.get("section") or ""}'.strip()[:260],
-                            "metadata": {
-                                "doc_id": h.get("doc_id"),
-                                "title": h.get("title"),
-                                "section": h.get("section"),
-                                "source_path": h.get("source_path"),
-                                "universe": universe,
-                                "codigo": h.get("codigo"),
-                                "fecha_emision": h.get("fecha_emision"),
-                                "revision": h.get("revision"),
-                                "estatus": h.get("estatus"),
-                            },
+                            "snippet": snippet or f'{h.get("title","")}'.strip()[:260],
+                            "metadata": metadata,
                         }
                     )
             else:
@@ -315,9 +482,97 @@ def tool_get_item(args: Dict[str, Any], conversation_id: str) -> Dict[str, Any]:
     return {"error": f"Tipo no soportado: {item_type}"}
 
 
+async def tool_query_tickets(args: Dict[str, Any], conversation_id: str) -> Dict[str, Any]:
+    """
+    Tool para ejecutar consultas SQL sobre tickets.
+    Reutiliza las funciones de query_tool.py pero filtra a top 25 resultados.
+    """
+    user_question = (args.get("user_question") or "").strip()
+    
+    if not user_question:
+        return {"error": "La pregunta no puede estar vacía."}
+    
+    tr(f"query_tickets question='{user_question[:120]}'")
+    
+    try:
+        # Obtener interaction_id para logging
+        interaction_id = get_interaction_id(conversation_id)
+        try:
+            interaction_id = int(interaction_id) if interaction_id else None
+        except (ValueError, TypeError):
+            interaction_id = None
+        
+        # 1️⃣ Generar la consulta SQL
+        sql_response = await generate_sql_query(user_question, conversation_id, interaction_id)
+        if not isinstance(sql_response, dict):
+            tr(f"generate_sql_query returned: {type(sql_response)} = {sql_response}")
+            return {
+                "error": "No se pudo generar la consulta SQL.",
+                "details": f"generate_sql_query retornó: {type(sql_response).__name__}"
+            }
+        
+        sql_query = sql_response.get("sql_query", "").strip()
+        sql_description = sql_response.get("mensaje", "")
+        
+        tr(f"📊 SQL Query Generated: {sql_query}")
+        tr(f"📝 SQL Description: {sql_description}")
+        
+        if not sql_query or sql_query.lower() == "no viable":
+            return {
+                "error": "No viable",
+                "message": (
+                    "No pude generar una consulta basada en tu pregunta. Puede deberse a que:\n"
+                    "🔹 Falta información o la pregunta es ambigua.\n"
+                    "🔹 Solicitas datos a los que no tengo acceso.\n"
+                    "🔹 Los datos no existen en la base.\n"
+                    "Intenta reformularla o agrega más detalle."
+                ),
+            }
+        
+        # 2️⃣ Ejecutar consulta en Zell
+        api_data, status_code, _, _ = fetch_query_results(sql_query)
+        if api_data is None:
+            return {"error": "Error llamando API de Zell."}
+        
+        if isinstance(api_data, list) and not api_data:
+            return {
+                "ok": True,
+                "response": "No hay resultados para esa consulta.",
+                "sql_query": sql_query,
+                "results_count": 0,
+            }
+        
+        # 3️⃣ Filtrar a top 25 resultados
+        if isinstance(api_data, list):
+            filtered_data = api_data[:25]
+            total_count = len(api_data)
+            tr(f"query_tickets: {total_count} total results, filtering to top 25")
+        else:
+            filtered_data = api_data
+            total_count = 1
+        
+        # 4️⃣ Retornar datos estructurados (el LLM de chat_v2 generará la respuesta final)
+        return {
+            "ok": True,
+            "query_type": "sql",
+            "sql_query": sql_query,
+            "sql_description": sql_description,
+            "user_question": user_question,
+            "results": filtered_data,
+            "results_count": len(filtered_data) if isinstance(filtered_data, list) else 1,
+            "total_results": total_count,
+            "note": f"Mostrando top 25 de {total_count} resultados" if total_count > 25 else None,
+        }
+        
+    except Exception as e:
+        tr(f"query_tickets exception: {e}")
+        return {"error": f"Error ejecutando consulta: {str(e)}"}
+
+
 TOOL_IMPL = {
     "search_knowledge": tool_search_knowledge,
     "get_item": tool_get_item,
+    "query_tickets": tool_query_tickets,
 }
 
 
@@ -327,6 +582,11 @@ TOOL_IMPL = {
 
 @router.post("/chat_v2")
 async def chat_v2(req: ChatV2Request):
+    # Variables para logging
+    had_previous_context = False
+    rounds_used = 0
+    final_response_id: Optional[str] = None
+    
     try:
         # Auth (skip in local only)
         if not SKIP_AUTH:
@@ -337,7 +597,16 @@ async def chat_v2(req: ChatV2Request):
         tr(f"NEW REQUEST conv_id={req.conversation_id} user={req.userName}")
         tr(f"USER: {req.user_message}")
 
-        prev_id: Optional[str] = None
+        # Obtener el último response_id de esta conversación para mantener contexto
+        conversation_prev_id = get_last_response_id(req.conversation_id)
+        had_previous_context = conversation_prev_id is not None
+        if conversation_prev_id:
+            tr(f"Continuing from previous response_id={conversation_prev_id}")
+        else:
+            tr("New conversation (no previous response_id)")
+
+        # prev_id se inicializa con el de la conversación anterior (solo para el primer round)
+        prev_id: Optional[str] = conversation_prev_id
         next_input: List[Dict[str, Any]] = [{"role": "user", "content": req.user_message}]
 
         # Tool-calling loop
@@ -345,18 +614,56 @@ async def chat_v2(req: ChatV2Request):
             tr(f"--- ROUND {round_idx} --- prev_id={prev_id}")
 
             t0 = time.time()
-            response = client.responses.create(
-                model=os.getenv("V2_MODEL", "gpt-5-mini"),
-                instructions=SYSTEM_INSTRUCTIONS,
-                tools=TOOLS,
-                input=next_input,
-                previous_response_id=prev_id,
-            )
+            try:
+                response = await responses_create(
+                    model=os.getenv("V2_MODEL", "gpt-5-mini"),
+                    instructions=SYSTEM_INSTRUCTIONS,
+                    tools=TOOLS,
+                    input=next_input,
+                    previous_response_id=prev_id,
+                )
+            except Exception as api_error:
+                # Si el error es por previous_response_id inválido/expirado, limpiar y reintentar sin él
+                error_str = str(api_error).lower()
+                if (prev_id and round_idx == 1 and 
+                    ("not found" in error_str or "invalid" in error_str or "expired" in error_str)):
+                    tr(f"previous_response_id expired/invalid: {api_error}, retrying without it")
+                    clear_conversation_context(req.conversation_id)
+                    prev_id = None
+                    # Reintentar sin previous_response_id
+                    response = await responses_create(
+                        model=os.getenv("V2_MODEL", "gpt-5-mini"),
+                        instructions=SYSTEM_INSTRUCTIONS,
+                        tools=TOOLS,
+                        input=next_input,
+                        previous_response_id=None,
+                    )
+                else:
+                    raise  # Re-lanzar si no es un error de previous_response_id
+            
             tr(f"OpenAI response.id={response.id} took={time.time() - t0:.2f}s")
+
+            rounds_used = round_idx
+            final_response_id = response.id
 
             # Final answer
             if getattr(response, "output_text", None):
                 tr(f"FINAL OUTPUT len={len(response.output_text)}")
+                # Guardar el response_id final para mantener contexto en la siguiente interacción
+                save_last_response_id(req.conversation_id, response.id)
+                
+                # Log de la interacción
+                log_chat_v2_interaction(
+                    userName=req.userName,
+                    conversation_id=req.conversation_id,
+                    user_message=req.user_message,
+                    response=response.output_text,
+                    response_id=response.id,
+                    rounds_used=rounds_used,
+                    had_previous_context=had_previous_context,
+                    extra_info="Success"
+                )
+                
                 return {"classification": "V2", "response": response.output_text}
 
             # Tool calls
@@ -365,9 +672,26 @@ async def chat_v2(req: ChatV2Request):
 
             if not calls:
                 tr("No tool calls and no output_text -> stopping")
+                # Guardar el response_id incluso en caso de error
+                save_last_response_id(req.conversation_id, response.id)
+                
+                error_response = "No hubo tool calls ni output_text (revisar tools/instructions)."
+                
+                # Log de la interacción con error
+                log_chat_v2_interaction(
+                    userName=req.userName,
+                    conversation_id=req.conversation_id,
+                    user_message=req.user_message,
+                    response=error_response,
+                    response_id=response.id,
+                    rounds_used=rounds_used,
+                    had_previous_context=had_previous_context,
+                    extra_info="No tool calls or output_text"
+                )
+                
                 return {
                     "classification": "V2",
-                    "response": "No hubo tool calls ni output_text (revisar tools/instructions).",
+                    "response": error_response,
                 }
 
             tool_outputs: List[Dict[str, Any]] = []
@@ -383,7 +707,14 @@ async def chat_v2(req: ChatV2Request):
 
                 fn = TOOL_IMPL.get(name)
                 t1 = time.time()
-                result = fn(args, req.conversation_id) if fn else {"error": f"Tool no implementada: {name}"}
+                if fn:
+                    # Manejar funciones async y síncronas
+                    if inspect.iscoroutinefunction(fn):
+                        result = await fn(args, req.conversation_id)
+                    else:
+                        result = fn(args, req.conversation_id)
+                else:
+                    result = {"error": f"Tool no implementada: {name}"}
                 dt = time.time() - t1
 
                 # Summary
@@ -397,6 +728,8 @@ async def chat_v2(req: ChatV2Request):
                         summary = f"ticket_data_keys={list(td.keys())[:8]} comments={'ticket_comments' in result}"
                     elif "blocks" in result:
                         summary = f"doc_blocks={len(result.get('blocks', []))}"
+                    elif "query_type" in result and result.get("query_type") == "sql":
+                        summary = f"sql_query_results={result.get('results_count', 0)}/{result.get('total_results', 0)}"
                     elif "error" in result:
                         summary = f"error={result['error']}"
                 tr(f"CALL {i} DONE in {dt:.2f}s :: {summary}")
@@ -413,7 +746,62 @@ async def chat_v2(req: ChatV2Request):
             next_input = tool_outputs
 
         tr("Reached max rounds")
-        return {"classification": "V2", "response": "Se alcanzó límite de pasos internos (tool loop)."}
+        # Guardar el último response_id incluso si se alcanzó el límite
+        if final_response_id:
+            save_last_response_id(req.conversation_id, final_response_id)
+        
+        error_response = "Se alcanzó límite de pasos internos (tool loop)."
+        
+        # Log de la interacción con límite alcanzado
+        log_chat_v2_interaction(
+            userName=req.userName,
+            conversation_id=req.conversation_id,
+            user_message=req.user_message,
+            response=error_response,
+            response_id=final_response_id or "",
+            rounds_used=rounds_used,
+            had_previous_context=had_previous_context,
+            extra_info="Max rounds reached"
+        )
+        
+        return {"classification": "V2", "response": error_response}
 
     except Exception as e:
+        # Si el error es por response_id expirado, limpiar y reintentar (opcional)
+        error_str = str(e).lower()
+        if "not found" in error_str or "invalid" in error_str or "expired" in error_str:
+            tr(f"Possible expired response_id error: {e}, clearing context")
+            clear_conversation_context(req.conversation_id)
+        
+        # Log del error
+        try:
+            log_chat_v2_interaction(
+                userName=req.userName,
+                conversation_id=req.conversation_id,
+                user_message=req.user_message,
+                response=f"Error: {str(e)}",
+                response_id=final_response_id or "",
+                rounds_used=rounds_used,
+                had_previous_context=had_previous_context,
+                extra_info=f"Exception: {type(e).__name__}"
+            )
+        except:
+            pass  # No fallar si el logging falla
+        
         raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {e}")
+
+
+@router.post("/chat_v2/clear_context")
+async def clear_chat_context(req: ChatV2Request):
+    """Endpoint opcional para limpiar el contexto de una conversación y empezar de nuevo."""
+    try:
+        if not SKIP_AUTH:
+            verificar_token(req.zToken)
+        
+        clear_conversation_context(req.conversation_id)
+        return {
+            "ok": True,
+            "message": f"Contexto limpiado para conversation_id={req.conversation_id}",
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al limpiar contexto: {e}")

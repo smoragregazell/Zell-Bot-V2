@@ -1,4 +1,4 @@
-from utils.llm_provider import chat_completion
+from utils.ai_calls import responses_create
 from utils.llm_config import get_llm_config
 import os
 import json
@@ -116,23 +116,38 @@ def handle_invalid_sql(user_question, conversation_id, interaction_id, step_id):
 
 # ─────────────────────────────────────────────
 async def generate_sql_query(user_question, conversation_id, interaction_id):
+    # Verificar que el prompt esté cargado
+    if not QUERY_PROMPT:
+        logging.error("❌ QUERY_PROMPT no está cargado!")
+        return None
     
-    messages = [
-        {"role": "system", "content": QUERY_PROMPT},
-        {"role": "user",   "content": user_question}
-    ]
     try:
-        llm_resp = await chat_completion(            # 👈 wrapper
-                    messages,
-                    tool="QUERY_SQL",                        # nombre libre
-                    response_format={"type": "json_object"},
-                    temperature=0,
-                    timeout=30
-                )
+        logging.info(f"🔍 Calling responses_create with tool=QUERY, user_question length={len(user_question)}")
         
-        result = json.loads(
-                llm_resp["choices"][0]["message"]["content"].strip()
-                )
+        # Usar Responses API
+        # instructions = QUERY_PROMPT (el prompt completo)
+        # input = mensaje del usuario
+        response = await responses_create(
+            instructions=QUERY_PROMPT + "\n\nIMPORTANTE: Responde SOLO en formato JSON con la estructura: {\"sql_query\": \"...\", \"mensaje\": \"...\"}",
+            input=[{"role": "user", "content": user_question}],
+            tool="QUERY",  # Usa configuración QUERY (gpt-5-mini)
+        )
+        
+        # Responses API retorna un objeto con output_text
+        if not response or not hasattr(response, 'output_text'):
+            logging.error(f"❌ Invalid response from responses_create: {response}")
+            return None
+        
+        content = response.output_text.strip()
+        logging.info(f"✅ Got response, content length={len(content)}")
+        
+        # Limpiar el contenido si viene con markdown
+        if content.startswith("```json"):
+            content = content.removeprefix("```json").removesuffix("```").strip()
+        elif content.startswith("```"):
+            content = content.removeprefix("```").removesuffix("```").strip()
+        
+        result = json.loads(content)
 
         # Log con sólo el nombre del prompt
         safe_messages = [
@@ -141,13 +156,20 @@ async def generate_sql_query(user_question, conversation_id, interaction_id):
         ]
         cfg = get_llm_config("QUERY")              # modelo / proveedor reales
 
+        # Obtener token usage si está disponible (Responses API puede tenerlo diferente)
+        token_usage = {}
+        if hasattr(response, 'usage'):
+            token_usage = response.usage
+        elif hasattr(response, 'token_usage'):
+            token_usage = response.token_usage
+        
         log_ai_call(                               # usa tu helper preferido
             call_type      = "SQL Generation",
             model          = cfg["model"],         # modelo real (openai o deepseek)
             provider       = cfg["provider"].value,# nuevo campo en el CSV
             messages       = safe_messages,
             response       = result,
-            token_usage    = llm_resp.get("usage", {}),   # ▶︎  cambio: usa llm_resp
+            token_usage    = token_usage if isinstance(token_usage, dict) else {},
             conversation_id= conversation_id,
             interaction_id = interaction_id,
             prompt_file    = QUERY_PROMPT_FILE,
@@ -160,7 +182,7 @@ async def generate_sql_query(user_question, conversation_id, interaction_id):
             provider       = cfg["provider"].value,# nuevo campo en el CSV
             messages       = safe_messages,
             response       = result,
-            token_usage    = llm_resp.get("usage", {}),   # ▶︎  cambio: usa llm_resp
+            token_usage    = token_usage if isinstance(token_usage, dict) else {},
             conversation_id= conversation_id,
             interaction_id = interaction_id,
             prompt_file    = QUERY_PROMPT_FILE,
@@ -168,8 +190,20 @@ async def generate_sql_query(user_question, conversation_id, interaction_id):
         )
         return result
 
+    except json.JSONDecodeError as je:
+        logging.error(f"❌ JSON decode error: {je}")
+        try:
+            content_preview = llm_resp.get('choices', [{}])[0].get('message', {}).get('content', 'N/A')[:500]
+            logging.error(f"   Response content: {content_preview}")
+        except:
+            logging.error(f"   Could not extract response content")
+        return None
     except Exception as e:
-        logging.error(f"❌ Exception during SQL generation: {e}")
+        import traceback
+        error_details = traceback.format_exc()
+        logging.error(f"❌ Exception during SQL generation: {e}\n{error_details}")
+        logging.error(f"   User question: {user_question[:200]}")
+        logging.error(f"   Exception type: {type(e).__name__}")
         return None
 
 # ─────────────────────────────────────────────
@@ -205,10 +239,9 @@ async def process_query_results(api_data, user_question, sql_query,
     try:
         llm_resp = await chat_completion(
             messages,
-            tool="QUERY_ANALYSIS",
+            tool="QUERY",  # Usa misma configuración QUERY
             response_format={"type": "json_object"},
-            temperature=0.3,
-            timeout=30
+            temperature=0.3
         )
         result = json.loads(
             llm_resp["choices"][0]["message"]["content"].strip()

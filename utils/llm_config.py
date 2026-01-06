@@ -34,7 +34,11 @@ def get_llm_config(tool: str | None = None):
 
     # override de modelo según proveedor
     if provider == LLMProvider.OPENAI:
-        model = _pick_env(f"{t}_OPENAI_MODEL") or GLOBAL_OPENAI
+        # Forzar gpt-5-mini para QUERY tool
+        if tool and tool.upper() == "QUERY":
+            model = _pick_env(f"{t}_OPENAI_MODEL") or "gpt-5-mini"
+        else:
+            model = _pick_env(f"{t}_OPENAI_MODEL") or GLOBAL_OPENAI
         api_key = _pick_env(f"{t}_OPENAI_API_KEY") or GLOBAL_KEY_OPENAI
         base_url = "https://api.openai.com/v1"
     else:

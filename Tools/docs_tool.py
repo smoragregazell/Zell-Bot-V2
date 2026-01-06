@@ -60,6 +60,28 @@ def search_docs(query: str, universe: str, top_k: int = 5) -> Dict[str, Any]:
         if i < 0 or i >= len(meta):
             continue
         m = meta[i]
+        # Construir metadata según tipo de documento
+        metadata = {
+            "doc_id": m.get("doc_id"),
+            "title": m.get("catalog_title") or m.get("title"),
+            "section": m.get("section"),
+            "codigo": m.get("codigo"),
+            "fecha_emision": m.get("fecha_emision"),
+            "revision": m.get("revision"),
+            "estatus": m.get("estatus"),
+            "source_path": m.get("source_path"),
+        }
+        
+        # Metadata específica para meetings_weekly
+        if m.get("meeting_date"):
+            metadata["meeting_date"] = m.get("meeting_date")
+            metadata["meeting_start"] = m.get("meeting_start")
+            metadata["meeting_end"] = m.get("meeting_end")
+        if m.get("row_key"):
+            metadata["row_key"] = m.get("row_key")
+        if m.get("block_kind"):
+            metadata["block_kind"] = m.get("block_kind")
+        
         hits.append({
             "rank": rank + 1,
             "score": float(scores[0][rank]),
@@ -72,6 +94,7 @@ def search_docs(query: str, universe: str, top_k: int = 5) -> Dict[str, Any]:
             "revision": m.get("revision"),
             "estatus": m.get("estatus"),
             "source_path": m.get("source_path"),
+            **{k: v for k, v in metadata.items() if k not in ["doc_id", "title", "section", "codigo", "fecha_emision", "revision", "estatus", "source_path"]}
         })
 
     return {"ok": True, "universe": universe, "query": query, "hits": hits}
@@ -115,6 +138,8 @@ def get_doc_context(
     blocks = []
     for m in selected:
         header = []
+        
+        # Metadata genérica (políticas ISO, etc.)
         if m.get("codigo"):
             header.append(f"Código: {m.get('codigo')}")
         if m.get("fecha_emision"):
@@ -123,6 +148,17 @@ def get_doc_context(
             header.append(f"Rev: {m.get('revision')}")
         if m.get("estatus"):
             header.append(f"Estatus: {m.get('estatus')}")
+        
+        # Metadata específica para meetings_weekly
+        if m.get("meeting_date"):
+            header.append(f"Fecha reunión: {m.get('meeting_date')}")
+        if m.get("meeting_start") and m.get("meeting_end"):
+            header.append(f"Hora: {m.get('meeting_start')} - {m.get('meeting_end')}")
+        if m.get("row_key") and "#tema-" in str(m.get("row_key")):
+            tema_num = str(m.get("row_key")).split("#tema-")[-1]
+            header.append(f"Tema #{tema_num}")
+        elif m.get("row_key"):
+            header.append(f"Row: {m.get('row_key')}")
 
         title = m.get("catalog_title") or m.get("title")
         section = m.get("section") or ""
@@ -134,6 +170,10 @@ def get_doc_context(
             "section": section,
             "header": " | ".join(header),
             "text": m.get("text", ""),
+            # Metadata adicional para meetings
+            "meeting_date": m.get("meeting_date"),
+            "row_key": m.get("row_key"),
+            "block_kind": m.get("block_kind"),
         })
 
     return {"ok": True, "universe": universe, "blocks": blocks}

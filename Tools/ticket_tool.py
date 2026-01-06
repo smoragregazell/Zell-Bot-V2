@@ -1,5 +1,4 @@
 # 👉 wrapper que decide a qué proveedor pegarle
-from Tools.continuation_tool import TicketRequest
 from utils.llm_provider import chat_completion
 from utils.llm_config import get_llm_config
 import os
