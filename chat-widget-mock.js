@@ -356,12 +356,20 @@
 
             .thinking-indicator {
                 display: flex;
-                gap: 4px;
+                flex-direction: column;
+                gap: 8px;
                 padding: 12px 16px;
                 background: white;
                 border-radius: 18px;
                 border-bottom-left-radius: 4px;
                 box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            }
+            
+            .thinking-dots {
+                display: flex;
+                flex-direction: row;
+                gap: 4px;
+                align-items: center;
             }
 
             .thinking-dot {
@@ -378,6 +386,31 @@
 
             .thinking-dot:nth-child(3) {
                 animation-delay: 0.4s;
+            }
+
+            .live-steps-container {
+                margin-top: 8px;
+                min-height: 20px;
+            }
+
+            .live-step {
+                font-size: 12px;
+                color: #666;
+                line-height: 1.4;
+                opacity: 0;
+                transform: translateY(-5px);
+                transition: opacity 0.4s ease, transform 0.4s ease;
+                padding: 2px 0;
+            }
+
+            .live-step.active {
+                opacity: 1;
+                transform: translateY(0);
+            }
+
+            .live-step.fading-out {
+                opacity: 0;
+                transform: translateY(5px);
             }
 
             @keyframes bounce {
@@ -595,9 +628,11 @@
         const thinkingContent = document.createElement('div');
         thinkingContent.className = 'thinking-indicator';
         thinkingContent.innerHTML = `
-            <div class="thinking-dot"></div>
-            <div class="thinking-dot"></div>
-            <div class="thinking-dot"></div>
+            <div class="thinking-dots">
+                <div class="thinking-dot"></div>
+                <div class="thinking-dot"></div>
+                <div class="thinking-dot"></div>
+            </div>
         `;
         
         thinkingDiv.appendChild(avatar);
@@ -610,6 +645,61 @@
         const thinking = document.getElementById('thinking-indicator');
         if (thinking) {
             thinking.remove();
+        }
+    }
+
+    // ============================================
+    // FUNCIONES DE LIVE STEPS
+    // ============================================
+    
+    function showLiveStep(message) {
+        // Buscar el thinking indicator
+        const thinking = document.getElementById('thinking-indicator');
+        if (!thinking) return;
+        
+        // Buscar el thinking-content (donde están los dots)
+        const thinkingContent = thinking.querySelector('.thinking-indicator');
+        if (!thinkingContent) return;
+        
+        // Crear o obtener el contenedor de live steps
+        let stepsContainer = thinkingContent.querySelector('.live-steps-container');
+        if (!stepsContainer) {
+            stepsContainer = document.createElement('div');
+            stepsContainer.className = 'live-steps-container';
+            thinkingContent.appendChild(stepsContainer);
+        }
+        
+        // Remover step anterior con fade-out
+        const previousStep = stepsContainer.querySelector('.live-step.active');
+        if (previousStep) {
+            previousStep.classList.remove('active');
+            previousStep.classList.add('fading-out');
+            setTimeout(() => previousStep.remove(), 300);
+        }
+        
+        // Crear nuevo step
+        const step = document.createElement('div');
+        step.className = 'live-step';
+        step.textContent = message;
+        
+        stepsContainer.appendChild(step);
+        
+        // Activar animación fade-in
+        setTimeout(() => {
+            step.classList.add('active');
+        }, 10);
+    }
+    
+    function removeLiveSteps() {
+        const thinking = document.getElementById('thinking-indicator');
+        if (thinking) {
+            const thinkingContent = thinking.querySelector('.thinking-indicator');
+            if (thinkingContent) {
+                const stepsContainer = thinkingContent.querySelector('.live-steps-container');
+                if (stepsContainer) {
+                    stepsContainer.remove();
+                }
+            }
         }
     }
 
@@ -646,6 +736,20 @@
         if (input) input.disabled = true;
         if (sendButton) sendButton.disabled = true;
 
+        // Intentar usar SSE (streaming) primero, fallback a request normal
+        const useStreaming = true;
+        
+        if (useStreaming) {
+            try {
+                await sendMessageWithStreaming(message, input, sendButton);
+                return;
+            } catch (streamError) {
+                console.warn('Streaming falló, usando request normal:', streamError);
+                // Continuar con request normal como fallback
+            }
+        }
+
+        // Fallback: request normal (sin streaming)
         try {
             const response = await fetch(CHAT_V2_ENDPOINT, {
                 method: 'POST',
@@ -667,6 +771,7 @@
 
             const data = await response.json();
             removeThinking();
+            removeLiveSteps();
             
             const botResponse = data.response || 'Error de comunicación';
             addMessage(botResponse, false);
@@ -674,6 +779,7 @@
         } catch (error) {
             console.error('Error:', error);
             removeThinking();
+            removeLiveSteps();
             
             let errorMessage = 'Error de comunicación con el servidor.';
             if (error.message.includes('401') || error.message.includes('403')) {
@@ -691,6 +797,108 @@
                 input.focus();
             }
             if (sendButton) sendButton.disabled = false;
+        }
+    }
+
+    async function sendMessageWithStreaming(message, input, sendButton) {
+        const STREAM_ENDPOINT = `${BACKEND_URL}/chat_v2/stream`;
+        
+        // Enviar request POST para iniciar el stream
+        const response = await fetch(STREAM_ENDPOINT, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${getZToken()}`
+            },
+            body: JSON.stringify({
+                conversation_id: conversationId,
+                user_message: message,
+                zToken: getZToken(),
+                userName: getUserName()
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        // Leer stream de Server-Sent Events
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        let finalResponse = '';
+
+        try {
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n');
+                buffer = lines.pop() || ''; // Guardar línea incompleta
+
+                for (const line of lines) {
+                    if (line.startsWith('data: ')) {
+                        try {
+                            const data = JSON.parse(line.slice(6));
+                            
+                            if (data.type === 'status') {
+                                // Mostrar live step
+                                showLiveStep(data.message);
+                            } else if (data.type === 'response') {
+                                // Remover live steps y mostrar respuesta final
+                                removeLiveSteps();
+                                removeThinking();
+                                finalResponse = data.content;
+                                addMessage(finalResponse, false);
+                                
+                                // Rehabilitar input
+                                if (input) {
+                                    input.disabled = false;
+                                    input.value = '';
+                                    input.focus();
+                                }
+                                if (sendButton) sendButton.disabled = false;
+                                return; // Salir del loop
+                            } else if (data.type === 'error') {
+                                removeLiveSteps();
+                                removeThinking();
+                                addMessage(`Error: ${data.message}`, false);
+                                
+                                // Rehabilitar input
+                                if (input) {
+                                    input.disabled = false;
+                                    input.value = '';
+                                    input.focus();
+                                }
+                                if (sendButton) sendButton.disabled = false;
+                                return;
+                            }
+                        } catch (e) {
+                            console.error('Error parsing SSE data:', e);
+                        }
+                    }
+                }
+            }
+
+            // Si no se recibió respuesta, mostrar error
+            if (!finalResponse) {
+                removeLiveSteps();
+                removeThinking();
+                addMessage('No se recibió respuesta del servidor.', false);
+                
+                if (input) {
+                    input.disabled = false;
+                    input.value = '';
+                    input.focus();
+                }
+                if (sendButton) sendButton.disabled = false;
+            }
+        } catch (streamError) {
+            console.error('Error en stream:', streamError);
+            removeLiveSteps();
+            removeThinking();
+            throw streamError; // Re-lanzar para que el catch principal lo maneje
         }
     }
 

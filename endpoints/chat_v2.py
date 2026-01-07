@@ -8,9 +8,13 @@ import os
 import json
 import time
 import inspect
-from typing import Any, Dict, List, Optional
+import asyncio
+import re
+from typing import Any, Dict, List, Optional, Tuple
+from contextvars import ContextVar
 
 from fastapi import APIRouter, HTTPException
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 # --- Auth (optional skip in local) ---
@@ -113,6 +117,236 @@ def can_use_web_search(conversation_id: str) -> bool:
 
 # Configurar función de trace para logs_v2
 set_trace_function(tr)
+
+
+# ============================================
+# LIVE STEPS: StepEmitter con ContextVar
+# ============================================
+
+# ContextVar para el emitter actual (por request, thread-safe)
+_step_emitter: ContextVar[Optional['StepEmitter']] = ContextVar('step_emitter', default=None)
+
+
+class StepEmitter:
+    """Emite eventos de progreso para live steps en el frontend"""
+    
+    def __init__(self):
+        self.queue = asyncio.Queue()
+        self.last_sent_time = 0.0
+        self.last_message = ""
+        self.throttle_ms = 0  # Sin throttle - mostrar TODOS los mensajes (para debug)
+    
+    async def emit_status(self, message: str):
+        """Emite un mensaje de estado si pasa el throttle/dedupe"""
+        now = time.time() * 1000  # milliseconds
+        
+        # Dedupe: si es EXACTAMENTE el mismo mensaje, ignorar
+        # Pero permitir mensajes similares con IDs diferentes (ej: "Obteniendo ticket #123" vs "#456")
+        if message == self.last_message:
+            if TRACE_V2:
+                print(f"[V2-TRACE-DEBUG] Mensaje duplicado filtrado: '{message}'", flush=True)
+            return
+        
+        # Throttle: si pasó menos tiempo, ignorar (pero más permisivo)
+        time_since_last = now - self.last_sent_time
+        if time_since_last < self.throttle_ms:
+            if TRACE_V2:
+                print(f"[V2-TRACE-DEBUG] Mensaje throttled (esperando {self.throttle_ms - time_since_last:.1f}ms más): '{message}'", flush=True)
+            return
+        
+        self.last_sent_time = now
+        self.last_message = message
+        
+        if TRACE_V2:
+            print(f"[V2-TRACE-DEBUG] Mensaje enviado a queue: '{message}'", flush=True)
+        
+        try:
+            await self.queue.put({
+                'type': 'status',
+                'message': message,
+                'timestamp': now
+            })
+        except Exception as e:
+            # No bloquear si hay error (ej: queue cerrada)
+            if TRACE_V2:
+                print(f"[V2-TRACE-DEBUG] Error enviando a queue: {e}", flush=True)
+            pass
+    
+    async def get_event(self, timeout: float = 0.1) -> Optional[Dict[str, Any]]:
+        """Obtiene un evento de la queue con timeout"""
+        try:
+            return await asyncio.wait_for(self.queue.get(), timeout=timeout)
+        except asyncio.TimeoutError:
+            return None
+    
+    async def emit_response(self, response: str):
+        """Emite la respuesta final"""
+        try:
+            await self.queue.put({
+                'type': 'response',
+                'content': response,
+                'timestamp': time.time() * 1000
+            })
+        except Exception:
+            pass
+    
+    async def emit_error(self, error: str):
+        """Emite un error"""
+        try:
+            await self.queue.put({
+                'type': 'error',
+                'message': error,
+                'timestamp': time.time() * 1000
+            })
+        except Exception:
+            pass
+
+
+# ============================================
+# DETECCIÓN Y TRADUCCIÓN DE MENSAJES
+# ============================================
+
+def is_relevant_for_live_steps(msg: str) -> bool:
+    """Detecta si un mensaje tr() es relevante para mostrar en live steps"""
+    # Patrones más flexibles que capturan variaciones (con o sin puntos, etc.)
+    relevant_patterns = [
+        r"Buscando en documentación interna Zell",  # Con o sin "..."
+        r"Explorando scope=.+ ejecutando estrategia=.+",
+        r"Obteniendo top \d+ resultados para query",  # Con o sin ":"
+        r"Buscando en tickets con palabras clave",  # Con o sin ":"
+        r"Buscando en tickets con búsqueda semántica",  # Con o sin "..."
+        r"Buscando en: .+",  # Debe tener ":"
+        r"Obteniendo item .+ id=",  # Más flexible
+        r"Obteniendo info clave del documento",  # Con o sin espacio al final
+        r"Obteniendo datos del ticket #\d+",
+        r"Query SQL generado",  # Con o sin ":"
+        r"Ejecutando web_search para",  # Con o sin ":"
+        r"Generando respuesta final para el usuario",  # Con o sin "..."
+    ]
+    
+    for pattern in relevant_patterns:
+        if re.search(pattern, msg, re.IGNORECASE):
+            return True
+    return False
+
+
+def extract_live_step_message(msg: str) -> Optional[str]:
+    """Extrae el mensaje amigable del mensaje técnico usando regex"""
+    
+    # Patrones con sus traducciones
+    patterns = [
+        # "Buscando en documentación interna Zell..."
+        (r"Buscando en documentación interna Zell", 
+         "Buscando en documentación interna Zell..."),
+        
+        # "Explorando scope={scope} ejecutando estrategia={policy}"
+        (r"Explorando scope=(.+) ejecutando estrategia=(.+)", 
+         lambda m: f"Explorando {m.group(1)} con estrategia {m.group(2)}..."),
+        
+        # "Obteniendo top {top_k} resultados para query: '{query[:120]}'"
+        (r"Obteniendo top (\d+) resultados para query", 
+         lambda m: f"Se encontraron {m.group(1)} resultados relevantes"),
+        
+        # "Buscando en tickets con palabras clave: {words}"
+        (r"Buscando en tickets con palabras clave", 
+         "Buscando en tickets con palabras clave..."),
+        
+        # "Buscando en tickets con búsqueda semántica..."
+        (r"Buscando en tickets con búsqueda semántica", 
+         "Buscando en tickets con búsqueda semántica..."),
+        
+        # "Buscando en: {universe}"
+        (r"Buscando en: (.+)", 
+         lambda m: f"Buscando en {m.group(1)}..."),
+        
+        # "Obteniendo item {item_type} id={item_id}"
+        (r"Obteniendo item (.+?) id=(.+)", 
+         lambda m: f"Obteniendo {m.group(1)} #{m.group(2)}..."),
+        
+        # "Obteniendo info clave del documento "
+        (r"Obteniendo info clave del documento", 
+         "Obteniendo información del documento..."),
+        
+        # "Obteniendo datos del ticket #{item_id}"
+        (r"Obteniendo datos del ticket #(\d+)", 
+         lambda m: f"Obteniendo datos del ticket #{m.group(1)}..."),
+        
+        # "Query SQL generado: {sql_query}"
+        (r"Query SQL generado", 
+         "Ejecutando consulta SQL..."),
+        
+        # "Ejecutando web_search para: {web_query[:100]}"
+        (r"Ejecutando web_search para", 
+         "Buscando información en la web..."),
+        
+        # "Generando respuesta final para el usuario..."
+        (r"Generando respuesta final para el usuario", 
+         "Generando respuesta final para el usuario..."),
+    ]
+    
+    for pattern, translation in patterns:
+        match = re.search(pattern, msg)
+        if match:
+            try:
+                if callable(translation):
+                    return translation(match)
+                else:
+                    return translation
+            except Exception as e:
+                # Si hay error en la traducción, loguear y continuar
+                if TRACE_V2:
+                    print(f"[V2-TRACE-DEBUG] Error traduciendo '{msg}' con patrón '{pattern}': {e}", flush=True)
+                continue
+    
+    # Si no se encontró traducción, loguear para debug
+    if TRACE_V2:
+        print(f"[V2-TRACE-DEBUG] No se encontró traducción para mensaje relevante: {msg}", flush=True)
+    return None
+
+
+# ============================================
+# tr() MEJORADO (con emisión de eventos)
+# ============================================
+
+def tr(msg: str) -> None:
+    """Trace function mejorada: log normal + emisión de eventos live si aplica"""
+    # Log normal (siempre funciona, no cambia nada)
+    if TRACE_V2:
+        print(f"[V2-TRACE] {msg}", flush=True)
+    
+    # Si es relevante para live steps Y hay emitter activo, emitirlo
+    if is_relevant_for_live_steps(msg):
+        emitter = _step_emitter.get()
+        if emitter:
+            friendly_msg = extract_live_step_message(msg)
+            if friendly_msg:
+                # Debug: loguear cuando se emite un mensaje
+                if TRACE_V2:
+                    print(f"[V2-TRACE-DEBUG] Emitiendo live step: '{friendly_msg}' (original: '{msg}')", flush=True)
+                # Emitir sin bloquear (usar create_task si estamos en contexto async)
+                try:
+                    loop = asyncio.get_running_loop()
+                    # Estamos en contexto async, usar create_task
+                    asyncio.create_task(emitter.emit_status(friendly_msg))
+                except RuntimeError:
+                    # No hay event loop corriendo, crear uno nuevo (raro pero posible)
+                    try:
+                        loop = asyncio.get_event_loop()
+                        if loop.is_running():
+                            asyncio.create_task(emitter.emit_status(friendly_msg))
+                        else:
+                            loop.run_until_complete(emitter.emit_status(friendly_msg))
+                    except:
+                        # Si falla todo, ignorar (no es crítico)
+                        pass
+            else:
+                # Debug: mensaje relevante pero sin traducción
+                if TRACE_V2:
+                    print(f"[V2-TRACE-DEBUG] Mensaje relevante pero sin traducción: {msg}", flush=True)
+        else:
+            # Debug: si el mensaje es relevante pero no hay emitter, loguear
+            if TRACE_V2:
+                print(f"[V2-TRACE-DEBUG] Mensaje relevante pero sin emitter: {msg}", flush=True)
 
 
 # --- OpenAI client (usando ai_calls centralizado) ---
@@ -446,7 +680,7 @@ def tool_get_item(args: Dict[str, Any], conversation_id: str) -> Dict[str, Any]:
     # ---- DOC ----
     if item_type == "doc":
         universe = (args.get("universe") or "docs_org").strip()
-        tr(f"Obteniendo info clave del documento")
+        tr(f"Obteniendo info clave del documento ")
         try:
             # item_id = chunk_id
             result = get_doc_context(universe=universe, chunk_ids=[item_id], max_chunks=6)
@@ -741,6 +975,10 @@ async def chat_v2(req: ChatV2Request):
                 # Los tools integrados pueden venir sin "name" pero con "type"
                 is_web_search = (tool_type == "web_search" or name == "web_search")
                 
+                # Debug: loguear cuando detectamos web_search
+                if is_web_search:
+                    tr(f"[DEBUG] web_search detectado - tool_type={tool_type}, name={name}, arguments={getattr(item, 'arguments', 'N/A')}")
+                
                 # Validar límite de búsquedas web
                 if is_web_search:
                     #tr(f"Ejecutando web_search")
@@ -779,12 +1017,17 @@ async def chat_v2(req: ChatV2Request):
                         except:
                             pass
                         
+                        # Siempre mostrar mensaje cuando se ejecuta web_search
+                        # IMPORTANTE: Este mensaje se emite INMEDIATAMENTE cuando detectamos que OpenAI va a usar web_search
+                        # OpenAI ejecutará web_search internamente después, pero nosotros ya mostramos el mensaje aquí
                         if web_query:
                             tr(f"Ejecutando web_search para: {web_query[:100]}")
                         else:
-                            #tr(f"Buscando en web (query procesada por OpenAI)")
+                            # Si no podemos extraer la query, intentar obtenerla del mensaje del usuario o usar un mensaje genérico
+                            tr(f"Ejecutando web_search para: [query procesada por OpenAI]")
                         
-                        #tr(f"Búsqueda web permitida (count={new_count}/{MAX_WEB_SEARCHES_PER_CONV})")
+                        tr(f"Búsqueda web permitida (count={new_count}/{MAX_WEB_SEARCHES_PER_CONV}) - OpenAI ejecutará la búsqueda internamente")
+                        continue  # web_search es manejado por OpenAI, no necesitamos procesarlo
                 
                 try:
                     args = json.loads(getattr(item, "arguments", "") or "{}")
@@ -915,6 +1158,325 @@ async def chat_v2(req: ChatV2Request):
             pass  # No fallar si el logging falla
         
         raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {e}")
+
+
+# ============================================
+# HELPER: Procesar chat_v2 y retornar resultado
+# ============================================
+
+async def process_chat_v2_core(req: ChatV2Request) -> Dict[str, Any]:
+    """
+    Lógica central de chat_v2 que puede ser reutilizada.
+    Retorna dict con 'response' y 'response_id' en lugar de JSONResponse.
+    """
+    # Variables para logging
+    had_previous_context = False
+    rounds_used = 0
+    final_response_id: Optional[str] = None
+    
+    try:
+        # Auth (skip in local only)
+        if not SKIP_AUTH:
+            verificar_token(req.zToken)
+        else:
+            tr("Autenticación omitida (SKIP_AUTH=1)")
+
+        tr(f"Nueva solicitud - conv_id={req.conversation_id} usuario={req.userName}")
+        tr(f"Usuario: {req.user_message}")
+
+        # Obtener el último response_id de esta conversación para mantener contexto
+        conversation_prev_id = get_last_response_id(req.conversation_id)
+        had_previous_context = conversation_prev_id is not None
+        if conversation_prev_id:
+            tr(f"Continuando conversación previa (response_id: {conversation_prev_id})")
+        else:
+            tr("Nueva conversación (sin contexto previo)")
+
+        # prev_id se inicializa con el de la conversación anterior (solo para el primer round)
+        prev_id: Optional[str] = conversation_prev_id
+        next_input: List[Dict[str, Any]] = [{"role": "user", "content": req.user_message}]
+
+        # Tool-calling loop
+        for round_idx in range(1, 7):
+            tr(f"--- ROUND {round_idx} --- prev_id={prev_id}")
+            tr(f"Iniciando round {round_idx}")
+            tr(f"Enviando solicitud a OpenAI...")
+
+            t0 = time.time()
+            try:
+                response = await responses_create(
+                    model=os.getenv("V2_MODEL", "gpt-5-mini"),
+                    instructions=SYSTEM_INSTRUCTIONS,
+                    tools=TOOLS,
+                    input=next_input,
+                    previous_response_id=prev_id,
+                )
+            except Exception as api_error:
+                error_str = str(api_error).lower()
+                if (prev_id and round_idx == 1 and 
+                    ("not found" in error_str or "invalid" in error_str or "expired" in error_str)):
+                    tr(f"response_id expirado/inválido: {api_error}, reintentando sin contexto previo")
+                    clear_conversation_context(req.conversation_id)
+                    prev_id = None
+                    response = await responses_create(
+                        model=os.getenv("V2_MODEL", "gpt-5-mini"),
+                        instructions=SYSTEM_INSTRUCTIONS,
+                        tools=TOOLS,
+                        input=next_input,
+                        previous_response_id=None,
+                    )
+                else:
+                    raise
+            
+            tr(f"Respuesta recibida de OpenAI (took {time.time() - t0:.2f}s)")
+            tr(f"OpenAI response.id={response.id}")
+            
+            # Extraer información de tokens y costos
+            token_info = extract_token_usage(response)
+            model_used = os.getenv("V2_MODEL", "gpt-5-mini")
+            if token_info["total_tokens"] > 0:
+                tr(f"Tokens: input={token_info['input_tokens']}, output={token_info['output_tokens']}, total={token_info['total_tokens']}")
+                costs = calculate_cost(model_used, token_info["input_tokens"], token_info["output_tokens"])
+                tr(f"Cost: ${costs['cost_total_usd']:.6f}")
+
+            rounds_used = round_idx
+            final_response_id = response.id
+
+            # Final answer
+            if getattr(response, "output_text", None):
+                tr(f"Generando respuesta final para el usuario...")
+                tr(f"Respuesta final generada ({len(response.output_text)} caracteres)")
+                save_last_response_id(req.conversation_id, response.id)
+                
+                # Emitir respuesta final al emitter si existe (para SSE)
+                emitter = _step_emitter.get()
+                if emitter:
+                    await emitter.emit_response(response.output_text)
+                
+                log_chat_v2_interaction(
+                    userName=req.userName,
+                    conversation_id=req.conversation_id,
+                    user_message=req.user_message,
+                    response=response.output_text,
+                    response_id=response.id,
+                    rounds_used=rounds_used,
+                    had_previous_context=had_previous_context,
+                    extra_info="Success"
+                )
+                
+                return {"response": response.output_text, "response_id": response.id}
+
+            # Tool calls
+            calls = [it for it in response.output if getattr(it, "type", None) == "function_call"]
+            tr(f"tool_calls={len(calls)}")
+
+            if not calls:
+                tr("Sin tools solicitados y sin respuesta - deteniendo ejecución")
+                save_last_response_id(req.conversation_id, response.id)
+                
+                error_response = "No hubo tool calls ni output_text (revisar tools/instructions)."
+                
+                log_chat_v2_interaction(
+                    userName=req.userName,
+                    conversation_id=req.conversation_id,
+                    user_message=req.user_message,
+                    response=error_response,
+                    response_id=response.id,
+                    rounds_used=rounds_used,
+                    had_previous_context=had_previous_context,
+                    extra_info="No tool calls or output_text"
+                )
+                
+                return {"response": error_response, "response_id": response.id}
+
+            tool_outputs: List[Dict[str, Any]] = []
+            web_search_used_this_round = False
+            tools_called_this_round: List[str] = []
+
+            for i, item in enumerate(calls, start=1):
+                name = getattr(item, "name", "")
+                tool_type = getattr(item, "type", None)
+                try:
+                    args = json.loads(getattr(item, "arguments", "") or "{}")
+                except Exception:
+                    args = {"_raw_arguments": getattr(item, "arguments", "")}
+
+                tr(f"CALL {i}: {name} args={args}")
+
+                # Manejar web_search (tool integrado de OpenAI)
+                if tool_type == "web_search" or name == "web_search":
+                    # Debug: loguear cuando detectamos web_search
+                    tr(f"[DEBUG] web_search detectado en process_chat_v2_core - tool_type={tool_type}, name={name}")
+                    
+                    web_search_used_this_round = True
+                    tools_called_this_round.append("web_search")
+                    
+                    # Intentar extraer la query si está disponible
+                    web_query = ""
+                    try:
+                        if hasattr(item, "arguments") and item.arguments:
+                            args_dict = json.loads(item.arguments) if isinstance(item.arguments, str) else item.arguments
+                            web_query = args_dict.get("query", "") or args_dict.get("search_query", "")
+                    except:
+                        pass
+                    
+                    # Siempre mostrar mensaje cuando se ejecuta web_search
+                    # IMPORTANTE: Este mensaje se emite INMEDIATAMENTE cuando detectamos que OpenAI va a usar web_search
+                    if web_query:
+                        tr(f"Ejecutando web_search para: {web_query[:100]}")
+                    else:
+                        tr(f"Ejecutando web_search para: [query procesada por OpenAI]")
+                    
+                    tr(f"[DEBUG] web_search mensaje emitido - OpenAI ejecutará la búsqueda internamente")
+                    # OpenAI maneja web_search automáticamente
+                    continue
+
+                fn = TOOL_IMPL.get(name)
+                t1 = time.time()
+                if fn:
+                    if inspect.iscoroutinefunction(fn):
+                        result = await fn(args, req.conversation_id)
+                    else:
+                        result = fn(args, req.conversation_id)
+                else:
+                    tr(f"Tool {name} no implementada")
+                    result = {"error": f"Tool no implementada: {name}"}
+                dt = time.time() - t1
+
+                tool_outputs.append(
+                    {
+                        "type": "function_call_output",
+                        "call_id": getattr(item, "call_id", ""),
+                        "output": json.dumps(result, ensure_ascii=False),
+                    }
+                )
+
+            if token_info["total_tokens"] > 0:
+                log_token_usage(
+                    conversation_id=req.conversation_id,
+                    response_id=response.id,
+                    round_num=round_idx,
+                    model=model_used,
+                    input_tokens=token_info["input_tokens"],
+                    output_tokens=token_info["output_tokens"],
+                    total_tokens=token_info["total_tokens"],
+                    web_search_used=web_search_used_this_round,
+                    tools_called=tools_called_this_round
+                )
+            
+            prev_id = response.id
+            next_input = tool_outputs
+
+        tr("Límite de rounds alcanzado (máximo 6)")
+        if final_response_id:
+            save_last_response_id(req.conversation_id, final_response_id)
+        
+        error_response = "Se alcanzó límite de pasos internos (tool loop)."
+        
+        log_chat_v2_interaction(
+            userName=req.userName,
+            conversation_id=req.conversation_id,
+            user_message=req.user_message,
+            response=error_response,
+            response_id=final_response_id or "",
+            rounds_used=rounds_used,
+            had_previous_context=had_previous_context,
+            extra_info="Max rounds reached"
+        )
+        
+        return {"response": error_response, "response_id": final_response_id or ""}
+
+    except Exception as e:
+        error_str = str(e).lower()
+        if "not found" in error_str or "invalid" in error_str or "expired" in error_str:
+            tr(f"Posible error de response_id expirado: {e}, limpiando contexto")
+            clear_conversation_context(req.conversation_id)
+        
+        error_response = f"Error: {str(e)}"
+        try:
+            log_chat_v2_interaction(
+                userName=req.userName,
+                conversation_id=req.conversation_id,
+                user_message=req.user_message,
+                response=error_response,
+                response_id="",
+                rounds_used=0,
+                had_previous_context=had_previous_context if 'had_previous_context' in locals() else False,
+                extra_info=f"Exception: {type(e).__name__}"
+            )
+        except:
+            pass
+        
+        return {"response": error_response, "response_id": ""}
+
+
+# ============================================
+# ENDPOINT SSE: /chat_v2/stream
+# ============================================
+
+@router.post("/chat_v2/stream")
+async def chat_v2_stream(req: ChatV2Request):
+    """Endpoint SSE que muestra live steps mientras procesa la solicitud"""
+    
+    async def event_generator():
+        # Crear emitter para este request
+        emitter = StepEmitter()
+        _step_emitter.set(emitter)  # Guardar en contexto
+        
+        try:
+            # Ejecutar el pipeline en un task
+            task = asyncio.create_task(process_chat_v2_core(req))
+            
+            # Enviar eventos mientras procesa
+            last_event_time = time.time()
+            keep_alive_interval = 8.0  # Enviar keep-alive cada 8 segundos
+            response_sent = False
+            
+            while not task.done() or not response_sent:
+                # Obtener evento del emitter
+                event = await emitter.get_event(timeout=0.1)
+                if event:
+                    last_event_time = time.time()
+                    if event['type'] == 'status':
+                        yield f"data: {json.dumps({'type': 'status', 'message': event['message']}, ensure_ascii=False)}\n\n"
+                    elif event['type'] == 'response':
+                        yield f"data: {json.dumps({'type': 'response', 'content': event['content']}, ensure_ascii=False)}\n\n"
+                        response_sent = True
+                        break
+                    elif event['type'] == 'error':
+                        yield f"data: {json.dumps({'type': 'error', 'message': event['message']}, ensure_ascii=False)}\n\n"
+                        response_sent = True
+                        break
+                else:
+                    # Si el task terminó pero no recibimos respuesta por eventos, obtener resultado directo
+                    if task.done() and not response_sent:
+                        try:
+                            result = await task
+                            if result and result.get('response'):
+                                yield f"data: {json.dumps({'type': 'response', 'content': result['response']}, ensure_ascii=False)}\n\n"
+                                response_sent = True
+                                break
+                        except Exception as e:
+                            yield f"data: {json.dumps({'type': 'error', 'message': f'Error: {str(e)}'}, ensure_ascii=False)}\n\n"
+                            response_sent = True
+                            break
+                    
+                    # Keep-alive: si pasan 8+ segundos sin eventos, enviar mensaje neutral
+                    if time.time() - last_event_time > keep_alive_interval:
+                        # Keep-alive sin mensaje visible (solo para mantener conexión)
+                        yield f": keep-alive\n\n"
+                        last_event_time = time.time()
+            
+            # Asegurar que el task termine
+            if not task.done():
+                await task
+            
+        except Exception as e:
+            yield f"data: {json.dumps({'type': 'error', 'message': f'Error: {str(e)}'}, ensure_ascii=False)}\n\n"
+        finally:
+            _step_emitter.set(None)  # Limpiar contexto
+    
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
 
 
 @router.post("/chat_v2/clear_context")
