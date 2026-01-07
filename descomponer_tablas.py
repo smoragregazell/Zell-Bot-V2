@@ -30,7 +30,7 @@ def cell_merge_info(cell):
 def table_to_matrix(tbl):
     return [[cell.text.strip() for cell in row.cells] for row in tbl.rows]
 
-def dump_docx_tables(path: str, sample_rows: int = 3, max_merge_markers: int = 30):
+def dump_docx_tables(path: str, sample_rows: int = None, max_merge_markers: int = None):
     doc = Document(path)
     print(f"Doc: {path}")
     print(f"Tablas: {len(doc.tables)}\n")
@@ -47,9 +47,15 @@ def dump_docx_tables(path: str, sample_rows: int = 3, max_merge_markers: int = 3
             headers = mat[0]
             print("Headers:", " | ".join(headers))
 
-        print("\nMuestra (primeras filas):")
-        for r in mat[:sample_rows]:
-            print(" - " + " | ".join(r))
+        # Mostrar todas las filas si sample_rows es None, sino mostrar solo las primeras N
+        if sample_rows is None:
+            print("\nTodas las filas:")
+            for r in mat:
+                print(" - " + " | ".join(r))
+        else:
+            print(f"\nMuestra (primeras {sample_rows} filas):")
+            for r in mat[:sample_rows]:
+                print(" - " + " | ".join(r))
 
         # merges
         merges = []
@@ -61,14 +67,21 @@ def dump_docx_tables(path: str, sample_rows: int = 3, max_merge_markers: int = 3
 
         if merges:
             print("\nMerges detectados (fila, col, info):")
-            for item in merges[:max_merge_markers]:
-                print(" -", item)
-            if len(merges) > max_merge_markers:
-                print(f" ... ({len(merges)} en total)")
+            if max_merge_markers is None:
+                # Mostrar todos los merges
+                for item in merges:
+                    print(" -", item)
+            else:
+                # Mostrar solo los primeros N merges
+                for item in merges[:max_merge_markers]:
+                    print(" -", item)
+                if len(merges) > max_merge_markers:
+                    print(f" ... ({len(merges)} en total)")
         else:
             print("\nMerges detectados: ninguno")
 
         print()
 
 if __name__ == "__main__":
-    dump_docx_tables(DOCX_PATH)
+    # Mostrar todas las filas y todos los merges
+    dump_docx_tables(DOCX_PATH, sample_rows=None, max_merge_markers=None)

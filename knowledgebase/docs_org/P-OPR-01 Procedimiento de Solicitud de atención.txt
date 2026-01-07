@@ -1,0 +1,394 @@
+Fecha de emisión: 14/11/2024 
+Revisión: 03
+Código: N/A
+
+Elaboró: Liza Bejar
+Revisó: Francisco Cameros
+Aprobó: Alejandro Moragrega
+
+Procedimiento interno de atención de solicitudes del cliente
+
+
+INDICE
+
+1.	Objetivo	2
+2.	Alcance	2
+3.	Términos y definiciones	3
+4.	Diagrama de Flujo	4
+5.	Desarrollo	5
+5.1.	Recepción de Solicitud de Atención.	5
+5.2.	Registro de solicitud de atención	5
+5.3.	Seguimiento de la solicitud de atención	10
+5.3.1.	Descripción de estatus y seguimiento	10
+5.3.2.	Flujo de estatus	14
+5.4.	Conclusión de la solicitud de atención	20
+5.4.1.	Encuesta de servicio	20
+5.4.2.	Evaluación general de la solicitud de atención	20
+6.1.	Motivos de cancelación de tickets	23
+6.2.	Dashboard	23
+6.3.	Monitores	25
+
+1. Objetivo 
+1.1. Dar soporte y atención oportuna a clientes con relación a una solicitud de atención.
+2. Alcance 
+2.1. Este procedimiento aplica al procedimiento interno de atención al cliente.
+3. Términos y definiciones  
+3.1. Solicitud de atención 
+Petición formulada por el cliente donde se otorga información acerca de una falla, duda, aclaración, modificación, etc.  en relación con el sistema Zell Enterprise. También se conoce como ‘’ticket’’ al asignarle un folio. 
+3.2. Solicitud de Atención interna 
+Requerimiento o error detectado en pruebas internas, por lo que se resuelve únicamente entre el personal de Zell. Estas solicitudes se identifican cuando el Especialista de Producto indique que fue detectado en pruebas internas y seleccionando la casilla ‘’Interno’’ en el registro de la solicitud. Estas solicitudes se cierran por la persona que identificó el error.
+3.3. Cliente en operaciones
+Cuando se utiliza la palabra ‘’cliente’’, se hace referencia a aquellos que ya están en operaciones con Corporativo Zell, por lo que se clasifica como cliente en operaciones a partir de la primera factura de servicio. En caso de que un cliente en operaciones cancele el contrato con Corporativo Zell, todas las solicitudes de atención se deberán cancelar, a excepción de aquellos que tengan servicios de terceros liberados.
+3.4. Cliente en implementación
+Clientes que continúan en etapa para iniciar operaciones con Corporativo Zell. Los especialistas de producto reconocen a los clientes en implementación por medio de comunicados del Consejo Directivo, al identificarlos como nuevos clientes con contratos firmados recientemente y/o por las actividades que se realizan en las Solicitudes de Atención que se registran. En el formato Clientes Zell (F-OPR-04) se actualizan los clientes en implementación, operaciones y aquellos clientes en operaciones que están en proceso de terminar contrato con Corporativo Zell.
+3.5. Tiempo de Atención
+El tiempo transcurrido desde la recepción de la solicitud de atención (se tomarán las 9:00 horas de la mañana siguiente en el caso de solicitudes recibidas después de las 17:00 horas del día anterior) hasta el contacto efectivo de un representante de soporte con el o los contactos definidos por el usuario como habilitados para presentar dichas solicitudes, luego del cual.
+3.6. Servicios de terceros / desarrollo
+Expertos que apoyan en la resolución de problemas técnicos del Sistema Zell (procesos fuera del alcance del Sistema de Gestión), el cual se puede conformar por Director General, Director de Producto, Director de Operaciones y/o Desarrolladores de Software.
+4. Diagrama de Flujo
+
+inicio -> Recepción (5.1) -> Registro (5.2) -> Seguimiento (5.3) -> Conclusión (5.4) -> Fin
+5. Desarrollo.
+5.1. Recepción de Solicitud de Atención. 
+5.1.1. Se recibe un correo electrónico o llamada por parte del cliente en donde brinda la información de su Solicitud de Atención. 
+5.1.2. En caso de llamadas, se solicitará como evidencia de la llamada un correo electrónico al cliente.
+5.1.3. Se debe verificar que el contacto del cliente esté autorizado para solicitar requerimientos al revisar su registro en sistema Zell Tickets o solicitando confirmación de los usuarios autorizados.
+5.2. Registro de solicitud de atención 
+5.2.1. Todos los requerimientos del cliente, llamadas telefónicas, servicios, reportes de errores, modificaciones… deberán quedar registradas en el Sistema Zell Tickets.
+5.2.2. El especialista de producto lleva a cabo el registro ingresando a la URL https://tickets.zell.mx/ con su usuario y contraseña corporativos, en el apartado “registro” en Registro – Atención – Solicitud de atención.
+5.2.3. La solicitud de atención puede ser detectada en pruebas internas, por lo que se resuelve únicamente entre el personal de Zell. Estas solicitudes se identifican al indicar que fue detectado en pruebas internas y seleccionando la casilla ‘’Interno’’ en el registro de la solicitud. Estas solicitudes se cierran por la persona que identificó el error.
+5.2.1. Los campos requeridos para realizar el registro del ticket son los siguientes:
+
+**Tabla 0**: 21 filas x 2 columnas
+Headers: Campo | Información
+
+Todas las filas:
+ - Campo | Información
+ - Recibido | Indicar la fecha y hora en que se recibió la llamada, correo electrónico, visita al cliente…
+La hora se debe indicar media hora antes o media hora después de la recepción. Ejemplo: si se recibió correo a las 13:15 se debe colocar 13:00 o 13:30..
+ - Cliente | Se selecciona al cliente que solicitó el requerimiento.
+En caso de no aparecer el contacto de cliente que se requiere, solicitar a Director de Producto, Director de Operaciones o Implementación de Proyectos realizar el alta en el catálogo de clientes
+ - Interno | Marcar check si el ticket fue detectado en pruebas internas o es un requerimiento interno, no del cliente
+ - Título | Capturar el título de identificación de la solicitud de atención. Se puede registrar el asunto del correo electrónico, cuidando que este sea claro y conciso. Podrá registrarse el asunto del correo electrónico, siempre y cuando dé a entender el requerimiento del cliente.        
+Se debe asegurar que no tiene faltas de ortografía, palabras cortadas o abreviaturas en palabras clave.
+En caso de ser confuso, o no dar información adecuada, el especialista de producto debe describir un título acorde al requerimiento del cliente.
+Ejemplos:
+Proceso trabado: Saldos de cartera
+Incidente Clasificadores de Cobranza Z17516
+Ejemplos incorrectos:
+Sin definición:
+Reporte 5.
+Sin descripción completa:
+Proceso 117 reporte de pase a exigible sin ejecuci        
+ - Objetivo | No es necesario completar este campo        
+ - Proyecto | No es necesario completar este campo        
+ - Categoría | Su objetivo es dar respuesta oportuna a las solicitudes de atención por prioridad. Esta categoría puede y debe ser clasificada durante la vida de la solicitud de atención.
+•Falla sistema: el usuario realizó su proceso correctamente, pero el sistema no funcionó como debería. Ejemplo: errores de v10, no se puede acceder al sistema, existan proceso trabados, error al abrir pantalla y no mostrar campos…  
+•Soporte y dudas: la solución o respuesta al usuario fue una explicación del tema que el especialista conoce. Ejemplo: cómo funcionan los módulos, cómo configurar cargos financieros, cómo aplicar filtros en solicitudes para que al usuario solo le aparezcan solicitudes de cierto tipo de financiamiento o convenio, o casos donde no se pudieron replicar incidentes y no se conoció la causa...
+•Requerimiento de desarrollo: tickets con cotización de desarrollo / borrador de cotización; cualquier ajuste que realice desarrollo que no sea por una falla sistema, consultas técnicas que el especialista no puede acceder. Ejemplo: implementar producto de domiciliación, agregar un parámetro de configuración a los productos financieros, desarrollar proceso para planchar tipo de financiamiento a listado de créditos en un CSV…
+•Error en configuración: el usuario realizó su proceso incorrectamente o con variaciones al proceso normal, por lo que el especialista lo apoya a realizar la configuración o ajustes correctos en el sistema. Ejemplo: el archivo TXT de un proceso no se genera porque se configuró mal el nombre, el monto de la cuota de un producto es incorrecto porque se configuró en capital como mensual y en interés como quincenal, el cálculo de los moratorios es incorrecto porque seleccionaron sobre Capital inicial en vez de sobre Capital Vencido...
+•Requerimiento de configuración: Se requiere que el especialista apoye al usuario con configuraciones o ajustes en el sistema. Por lo general aplica para clientes en implementación o módulos recientemente contratados. Ejemplo: Configurar ejecuciones automáticas de procesos, configurar cierre de créditos en automático por saldos menores, configurar arbol de matriz de riesgo de PLD…
+•Otros: Cualquier tema no especificado en las categorías descritas anteriormente. Ejemplo: tickets internos, propuestas de mejora, seguimiento autorizaciones de clientes, facturación de nuevos servidores, deshabilitar servidores, tickets cancelados en los que no se realizó ninguna actividad de ajuste, soporte...
+ - Urgente | Marcar check si el ticket es falla mayor, media o el ajuste es urgente o inmediato
+ - Problemática | Indicar la problemática o solicitud general del cliente.
+ - Módulo ZELL | Módulo al que pertenece el requerimiento:
+1. Solicitudes
+2. Sistema
+3. Procesos
+4. Manuales
+5. Otros
+6. Domiciliación
+7. Grupales
+8. Web Services
+9. Cartera
+10. Cobranza
+11. Contabilidad
+12. Reportes
+13. Monitores
+14. PLD
+15. Tickets
+16. Catálogos
+ - Tipo Falla | Seleccionar el tipo de falla según su nivel de prioridad. Los tiempos de atención son las horas transcurridas desde la recepción del requerimiento hasta su registro
+Mayor: El Sistema Zell dejó de operar totalmente o detuvo la operación del cliente. Ejemplos: error Login Failed For User Zell, Error 503. The service is unavailable, no carga la página, intermitencias y errores en consultas que impiden la operación. Tiempo: 2 horas hábiles
+Media: Falla en un módulo del Sistema Zell que dejó a una o más áreas operativas sin trabajar. Ejemplo: lentitud en el sistema, falla en proceso de generación del archivo de buró, al entrar a pantalla de pagos marca error que oculta la pantalla y no permite capturar pagos, listas de cobranza sin créditos, listas o procesos atorados, no llega información completa, errores en consultas, no se pueden autorizar solicitudes… Tiempo: 4 horas hábiles.
+Otros: Una falla menor, un problema menor en una pantalla, proceso, reporte o función o cualquier solicitud de atención como: dudas, aclaraciones y modificaciones: 24 horas naturales en días hábiles.
+ - Ejecutivo Dueño | El sistema registra de manera automática al colaborador que registra la solicitud de atención. En caso de que el colaborador que registra sea diferente al que atenderá el ticket, seleccionar al colaborador en el listado (ejemplo, si se realizó el registro porque el especialista solicitado no se encontraba).
+ - Asignado A | Se asigna al colaborador que realizará las próximas actividades del ticket.
+Los especialistas de producto (workforce) son los responsables de la correcta asignación, así como del seguimiento efectivo de la solicitud de atención desde la apertura hasta el cierre, cancelación o conclusión de esta
+ - Estatus | El estatus por default para todos los tickets es ‘’Abierto’’
+ - Asesor externo | Se marca por default los asesores externos del cliente para comisiones. En caso de no aplicar, quitarlo del campo.
+ - Contacto cliente | Enlace de Zell con los contactos designados por el cliente para realizar el seguimiento del requerimiento. El contacto deberá capturarse a fin de notificar al cliente cuando se levante una solicitud de atención, así como poder enviar la encuesta de servicio al concluirla.
+En caso de no encontrarse el contacto en el listado, solicitar a Director de Producto, Director de Operaciones o Implementación de Proyectos el alta del contacto
+ - F. Entrega/Unidades | Unidades asignadas al desarrollo o configuración a realizar. Este campo se mantiene en blanco al registrar el ticket
+ - Comentario | Ingresar una descripción clara, breve y concisa del requerimiento del cliente, eliminando saludos o información innecesaria, espacios en blanco... ya que los comentarios deberán proporcionar información completa para el análisis de la solicitud de atención sin tener que recurrir a otros medios para validarla.
+Ejemplos:
+Se ejecutó el proceso de saldos de carta a las 9:10 am son las 11:42 am y no ha terminado la ejecución, Usuario USUARIOEJEMPLO1
+
+El reporte de comisiones no arroja información correcta, la columna ´dispersión´ no contempla créditos activos, se anexa evidencia del reporte
+
+Ejemplos incorrectos:
+Buenos días,
+El proceso de saldos de cartera sigue ejecutándose        
+Me ayudan a saber qué pasa
+Gracias,
+saludos
+
+Buenos días,
+El reporte de comisiones no cuadra la información
+
+ “imagen mandada por cliente”
+
+En la columna n y o no muestra el saldo
+
+Gracias
+ - Referencia | Capturar información referente a la recepción de la solicitud de atención, no olvidar la captura de la fecha y hora de esta referencia en el campo de recibido. Ejemplo: ¿fue por llamada, correo, visita? ¿quién lo solicitó? ¿desde qué correo? ¿cuál fue el asunto del correo? ¿a qué hora se recibió?
+ - Motivo | Motivo de cancelación, rechazo o suspensión. Este campo no aplica para el registro.
+
+5.2.2. Una vez realizado el registro, dar clic en “grabar”. El sistema generará un folio único de ticket para su identificación y seguimiento, así como notificación al contacto asignado.
+5.3. Seguimiento de la solicitud de atención
+5.3.1. Descripción de estatus y seguimiento
+Dependiendo del estatus en el que se encuentre la solicitud de atención, se establece un tiempo máximo para permanecer en el mismo, por lo que los Especialistas de Producto deberán brindar seguimiento para asegurar su actualización, quedando registrado en el sistema de tickets.
+El seguimiento puede realizarse por correo electrónico, llamadas, juntas… y registrándolo en comentarios en el sistema Zell Tickets.
+A continuación, se muestran los tiempos máximos en estatus y la frecuencia de seguimiento requerida.
+
+**Llave de colores para tabla 1**
+Color | Responsable de actividad en ese estatus
+Amarillo | Especialistas de producto 
+Rojo | Desarrollo
+Azul bajo | Calidad
+Gris | Cliente 
+Azul Rey | Administración y Finanzas
+
+**Tabla 1**: 22 filas x 4 columnas
+Headers: Estatus | ¿Cuándo se encuentra en este estatus? | Días máximos en estatus | Seguimiento de la solicitud    
+
+Todas las filas:
+ - Estatus | ¿Cuándo se encuentra en este estatus? | Días máximos en estatus | Seguimiento de la solicitud
+ - Abierto | Estatus inicial en el registro de un requerimiento del cliente. Define la acción para comenzar con su análisis. | Un día | Semanal
+ - Análisis del Ticket | Se realiza el análisis y entendimiento del requerimiento. Puede cambiar a este estatus durante el seguimiento de la solicitud de atención, ya sea por nuevos temas a atender o cuando el Especialista de Calidad detecta que una actividad no está clara o correcta. | 7 días | Semanal
+ - Espera Información | En espera de recibir información del cliente para continuar con el desarrollo y/o comprensión de su requerimiento. Puede ser por correo, llamada, visita. En caso de que expire la fecha máxima en estatus, el especialista de producto evaluará la conclusión o suspensión de la solicitud de atención. | 30 días | Semanal        
+ - Configura – Atención | Se cuenta con las herramientas necesarias para otorgar al cliente la respuesta a su requerimiento, por lo que realiza las configuraciones necesarias para su resolución y posterior respuesta al cliente. | 7 días
+Puede extenderse de acuerdo a la complejidad del caso (ejemplo PLD) | Semanal
+ - Calidad | *Se requieren realizar pruebas internas del desarrollo o configuración realizada, en donde se verifica que cumple con lo solicitado.
+*Se requiere revisar borradores de cotizaciones para evaluar documentación o asignación de unidades de desarrollo | 2 días | Al vencimiento de los días máximos en estatus    
+ - Por cotizar (requerimientos de bajo impacto) | El especialista de producto realiza el borrador de una cotización verificada por el especialista de calidad, quien define que puede asignar unidades de desarrollo. | 8 días | Al vencimiento de los días máximos en estatus
+ - Por cotizar (requerimientos de medio-alto impacto) | El especialista de producto realiza el borrador de una cotización verificada por el especialista de calidad, por lo que se requiere que desarrollo asigne unidades de desarrollo. | 8 días | Al vencimiento de los días máximos en estatus
+ - Notificar Cliente | Se obtiene una respuesta del Especialista de Calidad que requiere ser notificada al cliente, sea para su validación, revisión, solicitar más información... | Un día | Al vencimiento de los días máximos en estatus
+ - Cotizado | Se reciben unidades de desarrollo, por lo que el Especialista de Producto envía la cotización al cliente. El cliente puede aprobar o rechazar la cotización. | 30 días | Semanal
+ - Estima Fecha Desarrollo | Cliente aprueba la cotización y se requiere que desarrollo asigne una fecha estimada de entrega para el desarrollo del requerimiento | 8 días | Al vencimiento de los días máximos en estatus
+ - Desarrollo | *Se realiza el desarrollo del requerimiento, configuración o adecuaciones necesarias para cumplir con el requerimiento 
+pactado con el cliente.
+*El especialista de Calidad detecta incidencias en el desarrollo o adecuación
+Nota: Puede tener cotización de por medio. | En función de la fecha de entrega o la complejidad del caso | Un día hábil posterior al vencimiento de la fecha estimada de entrega
+ - Estima Fecha Liberar | El cliente validó en su ambiente de pruebas que el desarrollo o configuración es acorde a lo solicitado, por lo que se necesita determinar una fecha para la liberación en su ambiente de producción | 8 días | Al vencimiento de los días máximos en estatus
+ - Liberar  Producción | Se tiene una fecha para liberar el desarrollo o configuración realizada en el ambiente de producción del cliente | En función de la fecha de entrega | Un día hábil posterior al vencimiento de la fecha estimada de entrega
+ - Investigación | El Especialista de Producto o de Calidad requieren apoyo de desarrollo para resolución de dudas o requerimientos técnicos del Sistema Zell | En función de la fecha de entrega.
+
+En caso de no tener fecha, 30 días | Un día hábil posterior al vencimiento de la fecha estimada de entrega
+
+En caso de no tener fecha, al vencimiento de los días máximos en estatus
+ - Validación Cliente | El Especialista de Producto notifica al cliente la respuesta a su requerimiento y se requiere su validación para confirmar que es acorde a lo solicitado. En caso de que expire la fecha máxima en estatus, el especialista de producto evaluará la conclusión o suspensión de la solicitud de atención. | 30 días | Semanal        
+ - Por Facturar | Se valida que la solución al requerimiento es acorde a lo solicitado, se liberó desarrollo en producción y hay una cotización con unidades mayores a 0 de por medio | N/A | N/A
+ - Facturado | Se factura el servicio realizado al cliente para que proceda el pago de la cotización pactada | N/A | N/A
+ - Suspendido | Se suspenden temporalmente las actividades a realizar en la solicitud. Uno de los motivos más comunes es por falta de pago del cliente, el cliente solicita aplazar el desarrollo o entrega de requerimiento. | N/A | N/a
+ - Cerrado | El cliente validó la solución a su requerimiento. En este estatus no hay cotizaciones y si las hubiera, son aquellas marcadas con 0 unidades. | N/A | N/A        
+ - Cancelado | Se cancela el desarrollo de la solicitud de atención por cualquiera de los motivos presentados en el apartado 5.3.4. ‘’Motivos Asociados a los Procesos’’ | N/A | N/A
+ - Pagado | Se indica que la factura ha sido pagada por el cliente. | N/A | N/A
+
+NOTA: El especialista de producto es responsable del cumplimiento de los plazos antes mencionados. En caso de haber expirado los tiempos, deberá de ejercer las acciones necesarias para obtener respuestas. 
+
+
+5.3.2. Flujo de estatus
+
+**Tabla 2**: 67 filas x 5 columnas
+Headers: Estatus Origen | Asignado A | Actividad | Estatus destino | Asignado a
+
+Todas las filas:
+ - Estatus Origen | Asignado A | Actividad | Estatus destino | Asignado a
+ - Abierto | Especialista de Producto | Es una incidencia que debe ser revisada por el Especialista de Producto o es un requerimiento de desarrollo por lo que se requiere realizar borrador de cotización | Análisis del ticket | Especialista de Producto
+ - Abierto | Especialista de Producto | Es una incidencia o requerimiento de los cuales se tienen dudas que sólo pueden ser aclaradas por desarrollo | Investigación | Director de Producto/ Director de Operaciones/ Desarrollador de Software
+ - Abierto | Especialista de Producto | El ticket se apertura para tener registro de atención o validaciones | Cerrado | Especialista de Producto
+ - Abierto | Especialista de Producto | El requerimiento no es viable, es un ticket duplicado… (véanse motivos de cancelación) | Cancelado | Especialista de Producto
+ - Análisis de ticket | Especialista de Producto | Dar respuesta al cliente o realizar entregas de desarrollo, ajustes, modificaciones para que el cliente valida que es de acuerdo con lo solicitado | Validación cliente | Especialista de Producto
+ - Análisis de ticket | Especialista de Producto | Dar respuesta al requerimiento o verificar que la incidencia no se volvió a presentar | Cerrado | Especialista de Producto 
+ - Análisis de ticket | Especialista de Producto | Se requiere mayor información para clarificar el requerimiento, por lo que le solicita al cliente | Espera Información | Especialista de producto
+ - Análisis de ticket | Especialista de Producto | Se requieren realizar configuraciones para otorgar una respuesta al cliente (ejemplo: implementación PLD) | Configura - Atención | Especialista de producto
+ - Análisis de ticket | Especialista de Producto | El cliente solicita suspender el ticket, se detectan desarrollos complementarios o falta de respuesta del cliente | Suspendido | Especialista de producto
+ - Análisis de ticket | Especialista de Producto | Véanse motivos de cancelación | Cancelado | Especialista de producto
+ - Análisis de ticket | Especialista de Producto | Es una incidencia o requerimiento de los cuales se tienen dudas que sólo pueden ser aclaradas por desarrollo | Investigación | Director de Producto, Director de Operaciones, Desarrollador de Software
+ - Análisis de ticket | Especialista de Producto | Se realiza borrador de cotización o adecuaciones a cotización para validación interna | Calidad | Especialista de Calidad  
+ - Espera información | Especialista de Producto | Cliente envía información que debe ser analizada para otorgarle una respuesta | Análisis del ticket | Especialista de producto
+ - Espera información | Especialista de Producto | Véanse motivos de cancelación | Cancelado | Especialista de producto
+ - Espera información | Especialista de Producto | El cliente solicita suspender el ticket, se detectan desarrollos complementarios o falta de respuesta del cliente | Suspendido | Especialista de producto
+ - Espera información | Especialista de Producto | Cliente envía información para conclusión del requerimiento o por vencimiento de estatus | Cerrado | Especialista de producto
+ - Configura - Atención | Especialista de Producto | Se realizan configuraciones que deben ser validadas por el cliente | Validación Cliente | Especialista de producto       
+ - Configura - Atención | Especialista de Producto | Se realizan configuraciones que deben ser probadas para verificar que cumplen con lo solicitado | Calidad | Especialista de calidad
+ - Configura - Atención | Especialista de Producto | Se realizan configuraciones que deben ser notificadas al cliente | Notificar cliente | Especialista de producto
+ - Configura - Atención | Especialista de Producto | Se requieren resolver dudas con desarrollo | Investigación | Director de Producto, Director de Operaciones, Desarrollador de Software
+ - Calidad | Especialista de Calidad | Se detectaron incidencias en pruebas del desarrollo | Desarrollo | Director de Producto / Director de Operaciones / Desarrollador de Software
+ - Calidad | Especialista de Calidad | Se otorga una respuesta que debe ser comunicada al cliente, adjuntando documentación de las pruebas realizadas | Notificar cliente | Especialista de producto
+ - Calidad | Especialista de Calidad | Se completa el requerimiento o se solicita conclusión | Cerrado | Especialista de calidad / Especialista de producto
+ - Calidad | Especialista de Calidad | Se detectaron incidencias en pruebas del desarrollo que deben ser evaluadas para conocer causa, viabilidad… | Investigación | Director de Producto / Director de Operaciones / Desarrollador de Software
+ - Calidad | Especialista de Calidad | Se otorga una respuesta que debe ser validada por el cliente, adjuntando documentación de las pruebas realizadas | Validación cliente | Especialista de producto
+ - Calidad | Especialista de Calidad | Se valida que la cotización es correcta (documentación, redacción, viabilidad…) y es un requerimiento de bajo impacto | Por Cotizar | Especialista de calidad
+ - Calidad | Especialista de Calidad | Se valida que la cotización es correcta (documentación, redacción, viabilidad…) y es un requerimiento de medio-alto impacto o no es posible asignar unidades | Por Cotizar | Director de Producto / Director de Operaciones
+ - Calidad | Especialista de Calidad | La cotización o análisis es incorrecto, por lo que se requieren adecuaciones o información adicional | Revisión | Especialista de producto
+ - Por Cotizar | Especialista de Calidad | Se asignan unidades de desarrollo | Notificar Cliente | Especialista de producto
+ - Por Cotizar | Director de Producto / Director de Operaciones | Se asignan unidades de desarrollo | Notificar Cliente | Especialista de producto
+ - Por Cotizar | Director de Producto / Director de Operaciones | La cotización es incorrecta, por lo que se requieren adecuaciones | Calidad | Especialista de calidad       
+ - Notificar cliente | Especialista de Producto | Se asignan unidades de desarrollo a una cotización y se envía al cliente | Cotizado | Especialista de producto
+ - Notificar cliente | Especialista de Producto | Se da respuesta o entregas de desarrollo o calidad que deben ser validadas por el cliente, adjuntando la documentación de las pruebas realizadas o evidencias | Validación cliente | Especialista de producto
+ - Notificar cliente | Especialista de Producto | Desarrollo o calidad solicita más información para clarificar el requerimiento | Espera Información | Especialista de producto
+ - Notificar cliente | Especialista de Producto | Se reportan incidencias a desarrollos que deben ser atendidas | Desarrollo | Director de Producto / Director de Operaciones 
+ - Notificar cliente | Especialista de Producto | Se realizan entregas que deben ser probadas para verificar que cumple con lo solicitado | Calidad | Especialista de Calidad 
+ - Cotizado | Especialista de Producto | Cliente aprueba cotización y se requiere asignación de fecha estimada de entrega | Estima Fecha desarrollo | Director de Producto    
+ - Cotizado | Especialista de Producto | Cotización vencida / sin respuesta del cliente | Cerrado | Especialista de producto
+ - Cotizado | Especialista de Producto | Cliente no aprueba cotización | Cancelado | Especialista de producto       
+ - Cotizado | Especialista de Producto | Se realizan adecuaciones de la cotización que deben ser reevaluadas | Por Cotizar | Director de Producto / Director de Operaciones / Especialista de Calidad
+ - Cotizado | Especialista de Producto | Cliente solicita adecuaciones en cotización | Análisis del ticket | Especialista de producto
+ - Cotizado | Especialista de Producto | Se requiere pausar el requerimiento por instrucciones del cliente o porque el especialista detecta que se requiere | Suspendido | Especialista de producto
+ - Cotizado | Especialista de Producto | Cliente aprueba cotización y debe ser pagada de manera parcial antes de iniciar con el desarrollo | Facturación Parcial | Administración y finanzas
+ - Estima Fecha Desarrollo | Director de Producto | Se asigna fecha estimada para entrega a calidad | Desarrollo | Director de Producto
+ - Estima Fecha Desarrollo | Director de Producto | Se requieren adecuaciones o información adicional para realizar el desarrollo | Revisión | Especialista de producto       
+ - Desarrollo | Director de Producto | Se requieren pruebas para validar que el desarrollo cumple con lo solicitado | Calidad | Especialista de Calidad
+ - Desarrollo | Director de Producto | Se requieren adecuaciones o información adicional para concluir con el desarrollo | Revisión | Especialista de producto
+ - Validación cliente | Especialista de Producto | Cliente no valida respuesta otorgada o solicita adecuaciones que deben ser analizadas | Análisis del ticket | Director de Producto
+ - Validación cliente | Especialista de Producto | Cliente valida desarrollo en producción por lo que se requiere facturar la cotización o se liberó desarrollo en pruebas y venció el tiempo máximo en estatus | Por facturar | Administración y finanzas
+ - Validación cliente | Especialista de Producto | Cliente valida la respuesta o entrega por lo que se concluye el requerimiento. No incluye cotización o es de 0 unidades | Cerrado | Especialista de producto
+ - Validación cliente | Especialista de Producto | Cliente valida desarrollo en pruebas, por lo que se requiere liberación en producción | Estima fecha producción | Director de Producto
+ - Validación cliente | Especialista de Producto | Cliente valida desarrollo en pruebas y se requiere facturación parcial para liberación a producción | Facturación Parcial | Administración y finanzas
+ - Validación cliente | Especialista de Producto | Cliente no valida respuesta, por lo que se requiere revisión, adjuntando evidencias de validación | Calidad | Especialista de Calidad
+ - Estima Fecha Producción | Director de Producto | Se asigna fecha estimada para liberación de desarrollo en producción | Liberar Producción | Director de Producto
+ - Liberar Producción | Director de Producto | Se realiza liberación en producción del desarrollo pactado y debe ser notificado al cliente | Notificar cliente | Especialista de producto
+ - Investigación | Director de Producto | Se requiere mayor información o análisis del especialista de producto para clarificar el requerimiento | Revisión | Especialista de producto
+ - Investigación | Director de Producto | Se requiere mayor información del cliente para clarificar el requerimiento | Espera Información | Especialista de producto
+ - Investigación | Director de Producto | Se otorga una respuesta que debe ser notificada al cliente | Notificar cliente | Especialista de producto
+ - Investigación | Director de Producto | El cliente solicita suspender el ticket, se detectan desarrollos complementarios o se acuerda suspender | Suspendido | Especialista de producto
+ - Investigación | Director de Producto | Se requiere realizar el desarrollo o ajustes de lo concluido en la investigación | Desarrollo | Director de Producto / Director de Operaciones / Desarrollador de Software
+ - Investigación | Director de Producto | Se requieren realizar pruebas de la entrega para verificar que cumple con lo solicitado | Calidad | Especialista de calidad
+ - Suspendido | Especialista de Producto | Se reactiva ticket y se requiere analizar el requerimiento | Análisis del ticket | Especialista de producto
+ - Suspendido | Especialista de Producto | Se reactiva ticket y se requiere aclarar dudas o adecuaciones por parte de desarrollo | Investigación | Director de Producto / Director de Operaciones
+ - Facturación parcial | Administración y Finanzas | Cliente realiza el pago de la factura parcial, por lo que se puede iniciar con el desarrollo | Estima Fecha Desarrollo | Director de Producto
+ - Por facturar | Administración y Finanzas | Se realiza la factura de desarrollo, por lo que se solicita al cliente el pago | Facturado | Administración y Finanzas
+ - Facturado | Administración y Finanzas | Cliente realiza el pago de la factura, por lo que se concluye el ticket | Pagado | Administración y Finanzas
+
+5.4. Conclusión de la solicitud de atención
+5.4.1. Encuesta de servicio
+Al finalizar la solicitud de atención, el sistema Zell Tickets enviará la encuesta de satisfacción al cliente, (se envía automáticamente al seleccionar los estatus de cerrado y por facturar), esto con la finalidad de calificar el servicio ofrecido por los especialistas asignados.
+5.4.2. Evaluación general de la solicitud de atención
+Al dar por concluido la solicitud de atención del cliente, se calificará el seguimiento y servicio ofrecido.
+Los aspectos que se evaluarán son los siguientes
+
+**Tabla 3**: 13 filas x 2 columnas
+Headers: Aspecto a evaluar | Criterio
+
+Todas las filas:
+ - Aspecto a evaluar | Criterio
+ - El título es coherente con el requerimiento | Titulo acorde al requerimiento del cliente, sin faltas de ortografía, palabras cortadas o abreviaturas en palabras clave     
+ - Los comentarios realizados aportan una explicación clara y adecuada | Los comentarios principales deberán proporcionar información para el análisis de la solicitud de atención sin tener que recurrir a otros medios para validarlo. No debe incluir saludos, despedidas, ni información innecesaria o que no aporta al proceso; si menciona que hay un adjunto, debe estar en el ticket; que el comentario se pueda entender por cualquier persona, aunque no conozca Zell; buena redacción; que no esté cortado o con información de más, como lo son mezclar temas de otros tickets.
+ - La categoría seleccionada es correcta | Selección correcta de la categoría de acuerdo con el requerimiento o problema real del cliente
+Falla sistema: el usuario realizó su proceso correctamente, pero el sistema no funcionó como debería (v10)
+Soporte y dudas: la solución o respuesta al usuario fue una explicación del tema que el especialista conoce (mandar una guía de usuario, cómo funciona un módulo, no se pudieron replicar incidentes y no se supo la causa)
+Req desarrollo: tickets con cotización de desarrollo / borrador de cotización; cualquier ajuste que realice desarrollo que no sea por una falla sistema, consultas técnicas que el especialista no puede acceder
+Error configuración: el usuario realizó su proceso incorrectamente o con variaciones al proceso normal, por lo que el especialista lo apoya a realizar la configuración o ajustes correctos en el sistema
+Req configuración: Se requiere que el especialista apoye al usuario con configuraciones o ajustes en el sistema     
+Otros: cualquier otra situación que no caiga en ninguna de las clasificaciones anteriores (propuestas de mejora, seguimiento autorizaciones de clientes, facturación de nuevos servidores, deshabilitar servidores, tickets cancelados en los que no se realizó ninguna actividad de ajuste, soporte...
+ - El tipo de falla seleccionado es correcto | Selección correcta de la falla de acuerdo con el requerimiento       
+Mayor: no se puede acceder al sistema (marca error, no carga la página) intermitencias y errores en consultas que impiden la operación del cliente)
+Media: una o más áreas operativas tienen problemas con el sistema (listas de cobranza sin créditos, listas o procesos atorados, no llega información completa, errores en consultas, no se pueden autorizar solicitudes)
+Otros: cualquier otro requerimiento que no entre en lo anterior (dudas, requerimientos desarrollo...)
+ - Las asignaciones de ejecutivo/estatus fueron correctas | Asignación correcta del ejecutivo de acuerdo con el estatus del ticket, que el especialista no tenga asignado el ticket en un estatus de terceros (desarrollo, por cotizar…); el tema se pudo resolver entre especialistas sin tener que asignar al área de desarrollo; se pasó a cerrado y tenía cotización; se canceló ticket, pero sí hubo un soporte y atención, por lo que era cerrado)
+ - Se demostró entendimiento de la solicitud de atención | Se evaluará el análisis que se realice de la solicitud de atención hasta su conclusión, conocimiento del tema, descripción de cotización y requerimiento no coinciden (se solicita algo fuera del alcance); repetir explicaciones ya dadas, regreso de ticket por falta de entendimiento
+ - La cotización está correcta | Se evaluará que la cotización se entienda, tenga unidades, precio correcto, esté cargada al sistema en formato PDF, esté correcta la información (cliente, contacto, etc) y evidencia de la aprobación de la misma en caso de aplicar, que no tenga errores ortográficos, que incluya todas las especificaciones necesarias, que la persona que autoriza la cotización o contacto cliente sea quien aparece en el apartado de usuario responsable (en caso de ser diferente, preguntar a especialista), objetivo claro y en infinitivo (hacer, configurar, cambiar, mejorar), número de ticket correcto, tipo de archivo incorrecto (evidencia en lugar de cotización)
+ - La información proporcionada fue clara y completa | Se evalúa la información que proporciona el especialista de producto en los comentarios internos del ticket, indicar el ambiente, no. de solicitud, no. crédito, que los comentarios en el ticket sean claros, que no tenga faltas de ortografía en palabras clave (técnicas); se menciona que adjunta archivo, pero no está en los adjuntos; se regresa ticket por definición incompleta, faltaron ejemplos
+ - El seguimiento realizado fue correcto, demostrando compromiso en el proceso de resolución | Se evalúa el compromiso del especialista de producto al dar seguimiento a la solicitud de atención, como lo es el seguimiento con terceros (le pregunté a Alex, Paco me dijo, le mandé mensaje, me dio nueva fecha, me resolvió la duda, hizo el ajuste...), describir acciones realizadas, resolución de dudas (primero con los pares, director de operaciones y en última instancia con terceros), copiar a pareja en correos, tiempos de seguimiento
+ - Registro correcto fecha/hora de recibido | Se evaluará que la fecha de recibido coincida con el envío de la solicitud de atención por parte del cliente, sea media hora antes o media hora después (ejemplo: si se recibe 13:05 es válido poner 13:00 o 13:30)
+ - Cumple política de tiempo: Tipo de Falla | "Verificar que de acuerdo con el tipo de falla, se haya atendido según nuestra política de tiempos de atención, para lo cual se evalúa la fecha recibido vs la fecha de alta (se tomarán las 9:00 del día siguiente para requerimientos recibidos después de las 17:00)
+ - Cumplimiento de políticas de tiempo por estatus. | Se evalúa de forma automática el tiempo por estatus de la solicitud de atención de acuerdo con las políticas de días definida en cada estatus
+
+6. Anexos
+6.1. Motivos de cancelación de tickets
+
+Tabla 4: 12 filas x 2 columnas
+Headers: Habrá Tickets a los que se requiera colocar un Motivo, por lo que existen dos tipos de Motivos, los que son propios al proceso de Atención generados por cada ejecutivo, los cuales son para los Tickets que pasan a estatus Cancelado, Rechazado Zell y Temporalmente Suspendido; y los que asignan una observación de tipo Cualitativo (dado por los Directivos y desarrollo). | Habrá Tickets a los que se requiera colocar un Motivo, por lo que existen dos tipos de Motivos, los que son propios al proceso de Atención generados por cada ejecutivo, los cuales son para los Tickets que pasan a estatus Cancelado, Rechazado Zell y Temporalmente Suspendido; y los que asignan una observación de tipo Cualitativo (dado por los Directivos y desarrollo).      
+
+Todas las filas:
+ - Habrá Tickets a los que se requiera colocar un Motivo, por lo que existen dos tipos de Motivos, los que son propios al proceso de Atención generados por cada ejecutivo, los cuales son para los Tickets que pasan a estatus Cancelado, Rechazado Zell y Temporalmente Suspendido; y los que asignan una observación de tipo Cualitativo (dado por los Directivos y desarrollo). | Habrá Tickets a los que se requiera colocar un Motivo, por lo que existen dos tipos de Motivos, los que son propios al proceso de Atención generados por cada ejecutivo, los cuales son para los Tickets que pasan a estatus Cancelado, Rechazado Zell y Temporalmente Suspendido; y los que asignan una observación de tipo Cualitativo (dado por los Directivos y desarrollo).
+ - Cancelación | Cancelación
+ - Motivo | Descripción
+ - C001: Costo Elevado para Cliente | Cliente no aprobó debido a que el costo de la cotización fue alto.
+ - C002: Fuera de Tiempo para Cliente | Cliente no aprobó Cotización por estar fuera de fechas para su negocio.     
+ - C003: Por Solución Alternativa para Cliente | Cliente dio solución a su problema o necesidad de una forma alternativa y se cancela el Ticket
+ - C004: Ticket Repetido | Ticket Duplicado
+ - C005: Ticket Invalido o Erróneo | Ticket dado de alta por Error
+ - C006: Innecesario para el cliente | El cliente manifiesta que ya no lo necesita
+ - C007: Cancelado por ZELL por Vigencia | Cancelación de solicitud de atención por haber transcurrido más de un mes sin respuesta por parte del Cliente
+ - C008: Unificación de ticket | Se unifica solicitud de atención con otro requerimiento
+ - C009: Requerimiento incompleto | Cliente no define bien su requerimiento
+ 
+6.2. Dashboard
+6.2.1. El tablero de control para el proceso de atención a clientes cuenta con cuatro pantallas principales, como se muestra en la siguiente imagen de ejemplo. 
+
+**CONSULTAR IMAGEN**
+
+6.2.2. La segunda pantalla (superior derecha) se refleja el análisis de los tickets durante la semana (lunes a domingo). Por medio de un gráfico circular se muestra el porcentaje de tickets atendidos. 
+
+**CONSULTAR IMAGEN**
+
+Simbología para el Análisis de Tickets
+Color | Concepto | Descripción
+Gris | Cerrs | No. de tickets concluidos en la semana
+Azul Marino | NvosHoy | No. de nuevos tickets registrados en el día
+Azul bajito | NvosSem | No. de nuevos tickets registrados en la semana (sin contar los NvosHoy)
+Rojo | Pend | No. de tickets activos
+Amarillo | NoTrab | No. de tickets que no han sido atendidos en la semana
+Verde fuere | TrabHoy | No. de tickets que han sido atendidos en el día
+Verde | TrabSem | No. de tickets que han sido atendidos en la semana
+6.3. Monitores
+6.3.1. En la pantalla monitores se pueden filtrar las solicitudes de atención pendientes por cliente, por persona que registró solicitudes o por persona con solicitudes asignadas para seguimiento:
+
+**CONSULTAR IMAGEN**
+
+6.3.2. De acuerdo con el filtro seleccionado, aparecerá un conteo de solicitudes de atención activas.
+6.3.3. La columna estatus indica en qué estatus se encuentran las solicitudes de atención:
+
+**CONSULTAR IMAGEN**
+
+6.3.4. La columna Inmediato, indica las solicitudes de atención que están vencidas de acuerdo con el número de días que ha permanecido en el estatus actual, por lo que requieren atención inmediata.
+
+**CONSULTAR IMAGEN**
+
+6.3.5. La columna Trabajados, indica las solicitudes de atención atendidas al día de consulta por una persona diferente a la asignada al ticket.
+
+**CONSULTAR IMAGEN**
+
+6.3.6. Las columnas Día 1, Día 2… Día 30, indican el número de días faltantes para que venza X solicitud de atención.
+
+**CONSULTAR IMAGEN**
+
+6.3.7. Se marcan en amarillo las solicitudes próximas a vencer, en rojo las vencidas y en naranja las trabajadas (véase apartado 6.4.4).
+6.3.8. La columna Día y Tickets, indica una distribución de trabajo recomendada por día, priorizando las solicitudes de atención vencidas o por vencer en estatus y/o seguimiento semanal.
+
+**CONSULTAR IMAGEN**
+
+6.3.9. La columna de workforce indica las solicitudes de atención de clientes asignados, pero que tienen que ser atendidas por la pareja de especialistas.
+
+**CONSULTAR IMAGEN**
+
+7. Control de cambios
+Revisión | Cambio | Fecha | Realizado por
+0 | Creación del documento | 18/02/2021 | Karla Warren
+1 | Eliminación de motivos rechazado. Se habilita el envío automático de notificación de conclusión. Se habilita el registro obligatorio del contacto del cliente. | 08/03/2021 | Karla Warren
+2 | Actualización general de procedimiento (ruta de estatus, flujo…) y se agrega especialista de calidad | 08/05/2023 | Liza Bejar
+3 | Se agrega en ruta de estatus pasar de cotizado a suspendido | 14/11/2024 | Liza Bejar
+
+
+
+
+
+
+
+
+
+
+

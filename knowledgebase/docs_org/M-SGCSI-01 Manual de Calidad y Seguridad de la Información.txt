@@ -1,0 +1,715 @@
+Nombre del documento: Manual de Calidad y Seguridad de la Informaci�n
+Fecha de emisi�n: 25/11/2024
+Revisi�n: 12
+C�digo: M-SGCSI-01 
+
+
+Elabor�: Liza Bejar
+Revis�: Francisco Cameros
+Aprob�: Consejo Directivo
+
+
+
+
+
+
+
+
+
+
+
+MANUAL DE CALIDAD Y SEGURIDAD DE LA INFORMACI�N
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+�ndice
+1.	INTRODUCCI�N	5
+2.	OBJETIVO	5
+3.	T�RMINOS Y DEFINICIONES	7
+4.	CONTEXTO DE LA ORGANIZACI�N	7
+4.1.	Comprensi�n de la organizaci�n y de su contexto	7
+4.2.	Comprensi�n de las necesidades y expectativas de las partes interesadas	8
+4.3.	Determinaci�n del alcance del sistema de gesti�n	8
+4.4	SGCSI y sus procesos	10
+5	LIDERAZGO	10
+5.1	Liderazgo y compromiso	10
+5.1.1	Generalidades	11
+5.1.2.	Enfoque al cliente	12
+5.2	Pol�tica de calidad y seguridad de la informaci�n	12
+5.2.1	Establecimiento de la pol�tica de la calidad y seguridad de la informaci�n	12
+5.2.2.	Comunicaci�n de la pol�tica de la calidad y seguridad de la informaci�n	13
+5.3	Roles, responsabilidades y autoridades en la organizaci�n	13
+6	PLANIFICACI�N	14
+6.1	Acciones para abordar riesgos y oportunidades.	14
+6.1.1.	Apreciaci�n de riesgos de seguridad de la informacion	15
+6.1.2.	Tratamiento de los riesgos de seguridad de la informaci�n.	16
+6.1.	Objetivos de SGCSI y planificaci�n para lograrlos.	16
+6.2.	Planificaci�n de los cambios	17
+7.	APOYO / soporte	18
+7.1	Recursos	18
+7.1.1.	Generalidades	18
+7.1.2.	Recurso humano (Personas)	19
+7.1.3.	Infraestructura	20
+7.1.4.	Ambiente para la operaci�n de los procesos	21
+7.1.5.	Recursos de seguimiento y medici�n	21
+7.1.6.	Conocimientos de la organizaci�n	22
+7.1.	Competencia	22
+7.3	Toma de conciencia / concienciaci�n	23
+7.4	Comunicaci�n	23
+7.5	Informaci�n documentada	24
+7.5.1.	Generalidades	24
+7.5.2.	Creaci�n y actualizaci�n	24
+7.5.3.	Control de la informaci�n documentada	25
+8	OPERACI�N	26
+8.1	Planificaci�n y control operacional	26
+8.2	Requisitos para los productos y servicios	28
+8.2.1.	Comunicaci�n con el cliente	28
+8.2.2.	Determinaci�n de los requisitos para los productos y servicios	29
+8.2.3.	Revisi�n de los requisitos para los productos y servicios	29
+8.2.4.	Cambios en los requisitos para los productos y servicios	31
+8.3.	Apreciaci�n de riesgos de seguridad de la informaci�n	31
+8.4.	Tratamiento de los riesgos de seguridad de la informaci�n.	31
+8.5.	Dise�o y desarrollo de los productos y servicios	31
+8.6.	Control de los procesos, productos y servicios suministrados externamente	32
+8.6.1.	Generalidades	32
+8.6.2.	Tipo y alcance del control	32
+8.6.3.	Informaci�n para los proveedores externos	33
+8.7.	Producci�n y provisi�n del servicio	34
+8.7.1.	Control de la producci�n y de la provisi�n del servicio	34
+8.7.2.	Identificaci�n y trazabilidad	35
+8.7.3.	Propiedad perteneciente a los clientes o proveedores externos	36
+8.7.4.	Preservaci�n	36
+8.7.5.	Actividades posteriores a la entrega	37
+8.7.6.	Control de los cambios	38
+8.8.	Liberaci�n de los productos y servicios	39
+8.9.	Control de las salidas no conformes	39
+9.EVALUACI�N DEL DESEMPE�O	40
+9.1.	Seguimiento, medici�n, an�lisis y evaluaci�n	40
+9.1.1.	Generalidades	40
+9.1.2.	Satisfacci�n del cliente	41
+9.1.3.	An�lisis y evaluaci�n	41
+9.1	Auditor�a interna	42
+9.1	Revisi�n por la direcci�n	43
+9.1.1.	Generalidades	44
+9.1.2.	Entradas de la revisi�n por la direcci�n	44
+9.1.3.	Salidas de la revisi�n por la direcci�n	45
+10	MEJORA	46
+10.1	Generalidades	46
+10.2	No conformidad y acci�n correctiva	46
+10.3	Mejora continua	48
+11	DOCUMENTOS INTERRRELACIONADOS	48
+12	CONTROL DE CAMBIOS	48
+
+
+
+
+
+
+
+1. INTRODUCCI�N
+Corporativo Zell se constituy� en 2003 en el estado de Jalisco, M�xico con el objetivo de aprovechar la experiencia profesional y personal de sus socios, en un esfuerzo por utilizar todo este potencial para crear un crecimiento personal y econ�mico para todos ellos, para sus familias, para su entorno social y para su pa�s.
+Corporativo Zell es la consolidaci�n de experiencias combinadas de los socios de la compa�a, en la gesti�n de sistemas de informaci�n, automatizaci�n, gesti�n de la informaci�n, direcci�n de empresas y procesos de negocio.
+Ofrecemos herramientas de primer nivel a trav�s de las cuales las empresas pueden mejorar de manera efectiva su productividad. Nuestras soluciones ofrecen oportunidad de hacer eficiente el procesamiento interno de las operaciones financieras de cr�dito.
+Nuestras soluciones se desarrollan para ofrecer los m�s altos est�ndares de calidad a nuestros clientes y se actualizan continuamente para otorgar gran flexibilidad de adaptaci�n a los procesos y a los cambios que puedan requerir nuestros clientes y el entorno a lo largo del tiempo.
+2. OBJETIVO
+Presentar la estructura general de cumplimiento con cada uno de los requerimientos de la Norma ISO 9001:2015 e ISO 27001:2022, buscando preservar la calidad, confidencialidad, integridad y disponibilidad de la informaci�n, y proteger a �sta de los riesgos que puedan derivarse del amplio grupo de amenazas existentes.
+
+Mediante este Sistema de gesti�n, se pretende asegurar la continuidad de las l�neas de negocio, minimizar los da�os que puedan producirse, maximizar el retorno de las inversiones y las oportunidades de negocio, y la mejora continua de sus procesos.
+
+La Alta Direcci�n es consciente de que la informaci�n es un activo que tiene un elevado valor tanto para la propia organizaci�n, como para los clientes a quienes prestamos nuestros servicios, y requerimos, por tanto, de una protecci�n adecuada. Como base, punto de partida y soporte de nuestro Sistema de Gesti�n, se consideran los siguientes objetivos principales en cuanto a la calidad y seguridad de la informaci�n:
+
+* La protecci�n de los datos de car�cter personal y, por lo tanto, de la intimidad y privacidad de las personas de las que puede tener datos.
+
+* La aplicaci�n de las medidas t�cnicas y organizativas adecuadas a nuestro contexto, y necesarias para asegurar la confidencialidad, disponibilidad e integridad de nuestros sistemas de informaci�n, y de la informaci�n que se trata mediante los mismos.
+
+* La protecci�n de los derechos de propiedad intelectual, y el cumplimiento del resto de legislaci�n que pueda ser de aplicaci�n.
+
+* La asignaci�n de responsabilidades de seguridad, y la formaci�n y capacitaci�n del personal necesaria para asegurar una gesti�n adecuada de calidad y seguridad de la informaci�n.
+
+* La adecuada gesti�n de las incidencias y brechas de seguridad que puedan afectar o a nuestros clientes, y la gesti�n de la continuidad del negocio y de nuestras operaciones.
+
+* Realizar el seguimiento de la percepci�n de nuestros clientes del grado en que se cumplen sus necesidades y expectativas con relaci�n al servicio proporcionado.
+
+* Atender en tiempo los requerimientos de nuestros clientes, de acuerdo con nuestra pol�tica de servicio. 
+
+* Dar seguimiento a los requerimientos de nuestros clientes, asegurando que se cumplan los compromisos establecidos.
+
+* Aplicar controles de ciberseguridad partiendo de los resultados de la aplicaci�n de inteligencia de amenazas.
+
+3. T�RMINOS Y DEFINICIONES
+* SGC: Sistema de Gesti�n de Calidad.
+* SGSI: Sistema de Gesti�n de Seguridad de la Informaci�n
+* SGCSI: Sistema de gesti�n de calidad y seguridad de la informaci�n
+* Organizaci�n: Corporativo Zell.
+* Ticket: Sin�nimo utilizado para llamar a una Solicitud de Atenci�n.
+4. CONTEXTO DE LA ORGANIZACI�N
+4.1. Comprensi�n de la organizaci�n y de su contexto
+Determinamos las cuestiones externas e internas que son pertinentes para nuestro prop�sito y gesti�n estrat�gica, que afectan a nuestra capacidad para lograr los resultados y objetivos planificados en nuestro SGCSI.
+Nuestra estructura organizacional se adapta a las necesidades de Corporativo Zell y se encuentra claramente definida en el (F-RH-08) Organigrama.  
+A continuaci�n, se adjunta el an�lisis FODA (F-SGCSI-15) realizado en conjunto con la alta direcci�n desde el inicio de la implementaci�n del SGCSI.
+Se realiza el an�lisis del contexto de Corporativo Zell en conjunto con la alta direcci�n; se identifican, se le da el seguimiento y se revisa la informaci�n sobre estas cuestiones externas e internas de manera semestral, incluyendo aquellas cuestiones relacionadas al cambio clim�tico, registr�ndose en  FODA (F-SGCSI-15). Adicional, se cuenta con el Distintivo de Empresa Socialmente Responsable, con el cual se asegura un seguimiento a las cuestiones relacionadas al cambio clim�tico.
+4.2. Comprensi�n de las necesidades y expectativas de las partes interesadas
+Se tiene identificados las partes interesadas que son pertinente al SGCSI, sus expectativas, necesidades y los requisitos del sistema de gesti�n que son necesarios para su cumplimiento, as� como las partes interesadas relevantes que puedan tener requisitos con el cambio clim�tico, d�ndoles seguimiento y registr�ndolo en la Lista de Necesidades y Expectativas de las Partes Interesadas (F-SGCSI-16) .
+4.3. Determinaci�n del alcance del sistema de gesti�n
+Corporativo Zell determina los l�mites y la aplicabilidad del SGCSI para establecer su alcance, el cual se encuentra registrado en el formato Determinaci�n del Alcance SGCSI (F-SGCSI-14) y la Declaraci�n de Aplicabilidad (F-SGSI-03).
+Cuando se determina este alcance, Corporativo Zell considera:
+a) las cuestiones externas e internas indicadas en el apartado 4.1;
+b) los requisitos de las partes interesadas pertinentes indicados en el apartado 4.2;
+c) los productos y servicios de la organizaci�n.
+d) Las interfaces y dependencias entre las actividades realizadas por Corporativo Zell y las que se llevan a cabo por otras organizaciones, de acuerdo con la Secuencia e Interacci�n de Procesos (mapeo) (F-SGCSI-21) y el diagrama de Tortuga (F-SGC-02).
+e) El cambio clim�tico como una cuesti�n pertinente y se incluye dentro de los requisitos establecidos en el 4.1 y 4.2, as� como los relacionados que se derivan.
+Dentro del alcance del SG no aplican los siguientes puntos: 
+* 8.3 Dise�o y desarrollo, debido a que la funci�n preponderante de Corporativo Zell, que es la Atenci�n al cliente, est� enfocada en atender las solicitudes de atenci�n de nuestros clientes, as� como proveer soporte y atenci�n a sus requerimientos. 
+* 8.4.3 inciso f) verificaci�n en instalaciones del proveedor externo, ya que no se realizan verificaciones ni validaciones en instalaciones de proveedores externos
+* 8.5.1 inciso f) Validaci�n y revalidaci�n, debido a que las mediciones se realizan conforme a cada etapa del proceso. El servicio es monitoreado en la entrada y salida del proceso para asegurarse que es conforme con los requisitos. 
+* 7.1.5.2 Trazabilidad de las mediciones. �nicamente se realiza la verificaci�n de los recursos de seguimiento y medici�n de sistema Zell tickets, no la trazabilidad de esas mediciones, debido a que no se utiliza ning�n dispositivo, recurso o patr�n que requiera de calibraciones, ajustes o cualquier t�cnica metrol�gica.
+* Control 6.7 Teletrabajo: No se realiza teletrabajo en la empresa
+* Control 8.4 Acceso al c�digo fuente: No se tiene acceso al c�digo fuente de los programas, �nicamente se manejan licencias de uso de acuerdo con cada proveedor
+* Control 8.19 Instalaci�n del software en sistemas en producci�n: El proceso de atenci�n a clientes no realiza instalaci�n de software en los sistemas de producci�n
+* Control 8.25 Seguridad en el ciclo de vida del desarrollo: No se realiza desarrollo de software en el proceso de atenci�n a clientes
+* Control 8.27 Arquitectura segura de sistemas y principios de ingenier�a: No se realiza desarrollo de software en el proceso de atenci�n a clientes
+* Control 8.28 Codificaci�n segura: No se realiza desarrollo de software en el proceso de atenci�n a clientes
+* Control 8.29 Pruebas de seguridad en desarrollo y aceptaci�n: No se realiza desarrollo de software en el proceso de atenci�n a clientes
+* Control 8.31 Separaci�n de los entornos de desarrollo, prueba y producci�n: No se realiza desarrollo de software en el proceso de atenci�n a clientes
+* Control 8.33 Datos de prueba: No se realiza desarrollo de software y por lo tanto tampoco pruebas, en el proceso de atenci�n a clientes
+* Control 8.34 Protecci�n de los sistemas de informaci�n durante las pruebas de auditor�a: No se realiza desarrollo de software y por lo tanto tampoco auditor�as a los sistemas de informaci�n, en el proceso de atenci�n a clientes
+
+4.4 . SGCSI y sus procesos
+Corporativo Zell establece, implementa, mantiene, y mejora continuamente el sistema de gesti�n de calidad, incluido los procesos necesarios y sus interacciones.
+a) Las interacciones se muestran en la Secuencia e Interacci�n de Procesos (mapeo) (F-SGCSI-21).
+b) Las entradas, salidas, recursos, responsables, riesgos, criterios de cada uno de los procesos se encuentran en el formato diagrama de Tortuga (F-SGC-03)
+En la medida en que sea necesario, Corporativo Zell:
+a) mantiene informaci�n documentada para apoyar la operaci�n de sus procesos; ver listado maestro de documentos (F-SGCSI-01).
+b) conserva la informaci�n documentada para tener la confianza de que los procesos se realizan seg�n lo planificado; ver listado maestro de registros (F-SGCSI-02).
+5 LIDERAZGO
+5.1 Liderazgo y compromiso
+5.1.1 Generalidades
+
+La Alta Direcci�n, est� conformada por: Edgar Langarica Gonz�lez y Alejandro Moragrega Campuzano y esta evidencia su compromiso con el desarrollo e implementaci�n del SGCSI, as� como con la mejora continua de su eficacia:
+* Comunicando a las partes interesadas, la importancia de satisfacer tanto sus requisitos como sus expectativas (ver 5.1.2); as� como cumplir con requisitos legales y reglamentarios aplicables.
+* Desarrolla una pol�tica y unos objetivos reales, medibles y coherentes con la realidad de la organizaci�n y las necesidades de SGCSI son comunicados, entendidos y aplicados ver 5.2 y 6.2 
+* Promueve a trav�s del SGCSI un enfoque a procesos (ver 4.4) y un pensamiento basado en riesgos (ver 6.1).
+* Llevando a cabo las revisiones de la Alta Direcci�n seg�n lo establecido en el punto 9.3, para asegurar el logro de resultados.
+* Asegurando la disponibilidad de recursos como lo determina el punto 7,
+* Apoyando otros roles como las supervisiones, gerencias y jefaturas, para demostrar su liderazgo en la forma en la que aplique a sus �reas de responsabilidad.
+* Genera una carta compromiso de Calidad y Seguridad de la informaci�n (F-SGCSI-20) as� como tambi�n para el personal de nuevo ingreso (F-SGCSI-03)
+* Promueve la toma de conciencia del enfoque basado en procesos,
+* Promueve la mejora continua.
+* Asegura que el Sistema de gesti�n consigue los resultados previstos, realizando el Informe Revisi�n por la Direcci�n (F-SGCSI-25) de manera semestral.
+* Dirige y apoya a las personas, para contribuir a la eficacia del sistema de gesti�n
+La Alta Direcci�n se apoya de los responsables del proceso de RRHH, para dar a conocer los procedimientos y formatos correspondientes al SGCSI a trav�s del curso de inducci�n al personal de nuevo ingreso, el cual sigue los temas marcados en la Inducci�n Personal Nuevo Ingreso (F-RH-06).
+5.1.2. Enfoque al cliente
+La Alta Direcci�n se asegura que los requisitos de los clientes se determinan con el prop�sito de satisfacer sus expectativas, seg�n los contratos de cada uno de los clientes.
+La Alta Direcci�n verifica la satisfacci�n del cliente a trav�s de evaluaciones de percepci�n del servicio y de satisfacci�n, con el prop�sito de aumentar el nivel de satisfacci�n, mediante la Encuesta de Servicio (F-OPR-01) y la Encuesta de Satisfacci�n (F-OPR-02), estableciendo acciones correctivas y/o abordando riesgos y oportunidades cuando sea requerido de acuerdo con los procedimientos �Acciones correctivas� y (P-SGCSI-06), �Gesti�n del Riesgo y Oportunidades� (P-SGCSI-04), respectivamente.
+5.2  Pol�tica de calidad y seguridad de la informaci�n
+5.2.1 Establecimiento de la pol�tica de la calidad y seguridad de la informaci�n
+La Alta Direcci�n se asegura que la Pol�tica de Calidad y Seguridad de la Informaci�n sea adecuada al prop�sito de Corporativo Zell. La Pol�tica de Calidad y Seguridad de la Informaci�n establece un marco de referencia para alcanzar los objetivos institucionales y es apropiada al prop�sito y contexto de la organizaci�n.
+POLIT�CA DE CALIDAD Y SEGURIDAD DE LA INFORMACI�N
+
+�En Corporativo Zell brindamos soporte y atenci�n a los requerimientos relacionados con los esquemas de servicio de las herramientas Zell que contratan nuestros clientes, quienes proveen servicios financieros. Buscamos la satisfacci�n de las partes interesadas, asegurando el cumplimiento de los requisitos que nos apliquen con el compromiso de preservar la confidencialidad, integridad y disponibilidad de la informaci�n, protegi�ndola de amenazas y mitigando los riesgos para asegurar la continuidad de los servicios y operaciones propios de Zell buscando maximizar el retorno de las inversiones, la mejora continua y la sostenibilidad de nuestras operaciones a trav�s de personal capacitado�.
+
+
+5.2.2. Comunicaci�n de la pol�tica de la calidad y seguridad de la informaci�n
+La Pol�tica de Calidad y Seguridad de la Informaci�n es comunicada y entendida dentro de Corporativo Zell a trav�s de diversos m�todos como; correo electr�nico, juntas, p�gina web, carpetas compartidas en la nube, dashboard. Es revisada para su continua adecuaci�n al menos una vez al a�o.
+5.3  Roles, responsabilidades y autoridades en la organizaci�n
+La Alta Direcci�n asegura la responsabilidad y autoridad, defini�ndolas y comunic�ndolas en todos los niveles de Corporativo Zell las cuales se visualizan en el organigrama (F-RH-08) de Corporativo Zell.
+En el cada descriptivo de puesto (DP-RH-NN) se registra la competencia, conocimientos, actividades y autoridades para los puestos dentro del alcance del SGCSI, teniendo como base la competencia esencial requerida para el correcto funcionamiento del SGCSI en el Cat�logo de Competencias (F-RH-02).
+Se define como responsable del SGCSI al puesto de Ingenier�a de Procesos (SGI), estableci�ndose sus roles y responsabilidades en el Descriptivo de Puesto (DP-RH-07).
+
+
+6 PLANIFICACI�N
+6.1 Acciones para abordar riesgos y oportunidades.
+Al planificar el sistema de gesti�n, Corporativo Zell considera las cuestiones referidas en el apartado 4.1 y los requisitos referidos en el apartado 4.2, y determina los riesgos que es necesario abordar, de acuerdo con el Procedimiento de Gesti�n del Riesgo y Oportunidades (P-SGCSI-04). Estos se registran en el formato Amef (F-SGCSI-04) para riesgos de procesos y para los riesgos por activos, se utiliza la Matriz de Riesgos por Activos (F-SGSI-01). Las oportunidades se identifican y atienden de acuerdo con la matriz FODA (F-SGCSI-15).
+Corporativo Zell planifica en el formato AMEF (F-SGCSI-04), Matriz de Riesgos por Activos (F-SGSI-01) y FODA (F-SGCSI-15):
+
+a) las acciones para abordar estos riesgos y oportunidades;
+
+b) la manera de:
+
+1) integrar e implementar las acciones en sus procesos del sistema de gesti�n (v�ase 4.4. y riesgos de los procesos);
+2) evaluar la eficacia de estas acciones. 
+3) Asegurar que el SGCSI pueda lograr sus resultados previstos.
+4) Prevenir o reducir efectos indeseados.
+5) Lograr la mejora continua
+
+6.1.1. Apreciaci�n de riesgos de seguridad de la informaci�n
+Se dispone de un procedimiento de Gesti�n del Riesgo y Oportunidades (P-SGCSI-04) por medio del cual se define y aplica un proceso de apreciaci�n de riesgos de SGCSI en el cu�l:
+
+* Se establecen los criterios sobre los riesgos de proceso y activos, en el que se incluyen los criterios de aceptaci�n de riesgos y lo establecido para llevar a cabo las apreciaciones de riesgos.
+* Se asegura que las sucesivas apreciaciones generan resultados consistentes, v�lidos y comparables.
+* Valoraci�n de riesgos considerando los criterios establecidos y la priorizaci�n en el tratamiento.
+* Analizando las posibles consecuencias de la materializaci�n de los riesgos, valorando la probabilidad y determinando los niveles de riesgos.
+* Se identifican los riesgos de seguridad de la informaci�n asociados a las p�rdidas de confidencialidad, integridad y disponibilidad, e identificando los due�os de los riesgos.
+* Se formula el Plan de tratamiento de riesgos (F-SGCSI-23), se determinan los controles necesarios y priorizaci�n de riesgos para llevar a cabo el plan; Se aprueba el plan y se aceptan los riesgos de residuales por parte de los due�os de los riesgos.
+6.1.2. Tratamiento de los riesgos de seguridad de la informaci�n. 
+Corporativo Zell tiene implementado el plan de tratamiento de riesgos de seguridad de la informaci�n, guardando informaci�n documentada del mismo.
+Para el tratamiento de riesgos que se desarrollar� en dicho plan, atendiendo a los requisitos de la norma de referencia, se seleccionar�n y aplicar�n los controles o medidas de seguridad necesarios y adecuados a los riesgos, teniendo en cuenta los controles definidos en el Anexo A de la norma ISO 27001. Se elabora la declaraci�n de aplicabilidad (F-SGSI-03) que contenga los controles necesarios y la justificaci�n de la inclusi�n, est�n implantados o no y la justificaci�n de las exclusiones de los controles del anexo A
+Se desarrollar�n los procedimientos documentados necesarios mediante los cuales se especificar�n c�mo esos controles de seguridad son aplicados, implementados, monitorizados y mejorados.
+Este proceso se documenta en el Plan de tratamiento de riesgos (F-SGCSI-23) el cual es aprobado y aceptado por los due�os de los riesgos.	
+6.2. Objetivos de SGCSI y planificaci�n para lograrlos.
+La Alta Direcci�n asegura que los Objetivos de Calidad y seguridad de la informaci�n, incluyendo aquellos necesarios para cumplir los requisitos del servicio, sean establecidos en las funciones y niveles relevantes dentro de la organizaci�n. Los Objetivos de Corporativo Zell son medibles, consistentes, Comunicados y actualizados cuando es apropiado, con la Pol�tica de Calidad y seguridad de la informaci�n. Teniendo en cuenta los requisitos de SGCSI aplicables y los resultados de la apreciaci�n y tratamiento de los riesgos.
+Al planificar c�mo lograr sus objetivos de la calidad y seguridad de la informaci�n, Corporativo Zell determina qu� se va a hacer; qu� recursos se requerir�n, qui�n ser� responsable, cu�ndo se finalizar�, c�mo se evaluar�n los resultados por medio del formato Objetivos de la Calidad y seguridad de la informaci�n (F-SGCSI-19).
+
+6.3. Planificaci�n de los cambios
+Cuando Corporativo Zell determina la necesidad de cambios en el sistema de SGCSI, estos cambios se llevan a cabo de manera planificada, se registran en el Sistema Zell Tickets, o en caso de cambios derivados de la revisi�n por la direcci�n, en el formato de Proyecto de cambio (F-SGCSI-18), considerando;
+a) el prop�sito de los cambios y sus consecuencias potenciales;
+b) la integridad del SGCSI;
+c) la disponibilidad de recursos;
+d) la asignaci�n o reasignaci�n de responsabilidades y autoridades.
+Los proyectos de cambio se pueden documentar cuando exista alguno de los siguientes casos y pueden surgir de cualquier �rea o proceso dentro del alcance:
+> Cambio Tecnol�gico,
+> Cambios en un proceso,
+> Cambios en la estructura organizacional,
+> Modificaci�n en reglamentaciones o requisitos,
+> Implementaci�n de nuevos procesos operativos. 
+> Incorporaci�n de nuevos procesos al SGCSI.
+
+7. APOYO / soporte
+7.1 Recursos
+7.1.1. Generalidades 
+Corporativo Zell determina y proporciona los recursos necesarios para el establecimiento, implementaci�n, mantenimiento, tratamiento de riesgos y mejora continua del sistema de gesti�n, considerando las capacidades y limitaciones de los recursos internos existentes y lo que se necesita obtener de los proveedores externos.
+La disponibilidad de recursos se revisar� durante la Revisi�n por la Direcci�n, donde el Consejo Directivo aprueba el suministro de los recursos requeridos. Los recursos que se proveen de externos son:
+* Mantenimiento de edificio 
+* Conectividad y administraci�n de redes
+* Servidores
+* Internet y telefon�a
+* Capacitaciones, cursos o consultor�a (cuando aplique)
+* Almacenamiento en la nube
+Se cuenta con un responsable de la administraci�n de los recursos financieros, quien es encargado de gestionar y administrar los compromisos fijos, as� como atender los temas financieros que surjan de manera extraordinaria. 
+Con relaci�n a los recursos humanos, la competencia del personal, los controles espec�ficos realizados a los primeros (diligencia debida) y su formaci�n quedan documentados DP-RH-NN descriptivo de puesto.
+7.1.2. Recurso humano (Personas)
+
+Corporativo Zell determina y proporciona las personas necesarias para la implementaci�n eficaz de su SGCSI y para la operaci�n y control de sus procesos, solicita se cubra de acuerdo con el Procedimiento de reclutamiento (P-RH-02), bas�ndose en el organigrama (F-RH-08), Pol�tica de SGCSI y/o la demanda del mercado.
+
+En particular se ha desarrollado una gu�a de usuario del SGSI (M-SGSI-01) de obligado cumplimiento por parte de todo el personal con acceso a la informaci�n.
+Uno de los aspectos analizados durante la Revisi�n del Sistema por la Direcci�n, est� relacionado con el objetivo de personal capacitado; as� como tambi�n por medio de procedimiento de capacitaci�n del personal (P-RH-01).
+* La organizaci�n garantiza la satisfacci�n de las necesidades de cualificaci�n del personal, proporcionando formaci�n, y concienciaci�n de la importancia de las actividades que realizan y su relaci�n con el SGCSI. 
+* Eval�a la eficacia de las acciones tomadas.
+* Mantiene los registros adecuados de la educaci�n, formaci�n, habilidades y experiencia.
+La sensibilizaci�n del personal en materia de calidad y de seguridad de la informaci�n es un complemento indispensable a la hora de realizar actividades de formaci�n. Las tareas de sensibilizaci�n tienen por objeto concienciar a todo el personal implicado en actividades que afecten al SGCSI.
+7.1.3. Infraestructura
+
+Corporativo Zell determina, proporciona y mantiene la infraestructura necesaria para la operaci�n de sus procesos y lograr la conformidad de los productos y servicios. La infraestructura que aplica para nuestra organizaci�n es:
+a) edificios y servicios asociados;
+b) equipos de c�mputo;
+c) tecnolog�as de la informaci�n y la comunicaci�n.
+El seguimiento del mantenimiento a la infraestructura de Corporativo Zell se realiza por parte del Responsable del SGCSI conforme al programa de Mantenimiento (F-SGCSI-17) de manera interna. Si se requiere alg�n mantenimiento correctivo, se solicita al proveedor correspondiente y se debe conservar la evidencia del trabajo realizado. En el programa de mantenimiento se menciona la revisi�n a la oficina (iluminaci�n, puertas, ventanas, etc.); a los equipos de c�mputo solamente se les actualiza el antivirus ya que se cuenta con equipo de repuesto en caso de necesitarlo; en cuanto a tecnolog�as de la informaci�n y la comunicaci�n, se revisa que los tel�fonos funcionen correctamente, as� como la evaluaci�n de los proveedores de conectividad y redes, telefon�a e internet, edificio, etc. (Procedimiento de Selecci�n y Evaluaci�n de Proveedores P-INF-01).
+
+7.1.4. Ambiente para la operaci�n de los procesos
+
+Corporativo Zell determina, proporciona y mantiene el ambiente necesario para la operaci�n de sus procesos y para lograr la conformidad de los productos y servicios.
+Esto se logra a trav�s de las evaluaciones de clima laboral (Formulario externo) que se realizan de manera anual para atender los puntos importantes que se detecten en el an�lisis, as� como el Programa de Mantenimiento (F-SGCSI-17) para asegurar que los colaboradores realizan sus labores en instalaciones adecuadas.
+Adem�s, se cuenta con una Pol�tica de Prevenci�n de Riesgos Psicosociales (PO-RH-09) y un Manual de Prevenci�n de Riesgos Psicosociales (M-RH-02).
+
+7.1.5. Recursos de seguimiento y medici�n
+Corporativo Zell determina los recursos necesarios para asegurarse de la validez y fiabilidad de los resultados de seguimiento y medici�n.
+ El seguimiento y medici�n se realiza semanalmente por medio del reporte de objetivos, en el cual se incluyen los resultados del Dashboard, verific�ndose su correcto funcionamiento al compararlos con los reportes proporcionados por el Sistema Zell Tickets
+En caso de que se detecten fallos, se informa al director de Operaciones para su correcci�n.
+Mantiene el registro de las capturas del Dashboard y Reportes del Sistema de Tickets como evidencia de la verificaci�n.
+
+7.1.6. Conocimientos de la organizaci�n 
+Corporativo Zell determina los conocimientos necesarios para la operaci�n de sus procesos y para lograr la conformidad de los productos y servicios. Estos conocimientos se mantienen y se ponen a disposici�n en la medida en que sea necesario, est�n documentados en el Procedimiento de Capacitaci�n Nuevo Ingreso (P-RH-03).
+Cuando se abordan las necesidades y tendencias cambiantes, Corporativo Zell considera sus conocimientos actuales y determina c�mo adquirir o acceder a los conocimientos adicionales necesarios y a las actualizaciones requeridas.
+Para actualizaci�n de conocimientos externos se define una persona responsable, quien asiste al curso, congreso, conferencia, evento, etc. Esta persona debe bajar el contenido a sus compa�eros de trabajo, ya sea en una pl�tica de sensibilizaci�n de acuerdo con el programa de Toma de Conciencia (F-RH-04) o bajo una capacitaci�n en el Plan de Capacitaci�n Anual (F-RH-09).
+Para la actualizaci�n de conocimientos internos, se puede recibir como retroalimentaci�n por parte del cliente, a trav�s de una lecci�n aprendida por el triunfo o fracaso de una actividad, donde deber� compartir el conocimiento con sus compa�eros de trabajo.
+7.2. Competencia
+Corporativo Zell:
+a) determina la competencia necesaria de las personas que realizan, bajo su control, un trabajo que afecta al desempe�o y eficacia del sistema de gesti�n mediante el Cat�logo de Competencias (F-RH-02).
+b) asegurar de que estas personas sean competentes, bas�ndose en la educaci�n, conocimientos/formaci�n o experiencia apropiadas en su Descripci�n de Puesto (DP-RH-NN);
+c) cuando sea aplicable, toma acciones para adquirir la competencia y recabar evidencia de la misma.
+d) Se eval�a que las acciones tomadas para alcanzar la competencia sean efectivas de acuerdo con el Procedimiento de Capacitaci�n de Personal (P-RH-01).
+En el caso de los conocimientos/formaci�n y habilidades, estas son deseables para el candidato en el puesto. 
+7.3 Toma de conciencia / concienciaci�n 
+Corporativo Zell se asegura de que las personas que realizan el trabajo bajo el control de la organizaci�n tomen conciencia de:
+a) la pol�tica de SGCSI;
+b) los objetivos de SGCSI pertinentes;
+c) su contribuci�n a la eficacia del sistema de gesti�n, incluidos los beneficios de una mejora del desempe�o;
+d) las implicaciones del incumplimiento de los requisitos del sistema de gesti�n.
+Esto de acuerdo con el programa Toma de Conciencia (F-RH-04).
+7.4  Comunicaci�n
+Corporativo Zell determina las comunicaciones internas y externas pertinentes al sistema de gesti�n, estas comunicaciones incluyen:
+a) qu� comunicar;
+b) cu�ndo comunicar;
+c) a qui�n comunicar;
+d) c�mo comunicar;
+e) qui�n comunica.
+Esto de acuerdo con los formatos aplicables de comunicaci�n interna y externa (F-RH-05).
+7.5 Informaci�n documentada
+7.5.1. Generalidades
+El sistema de gesti�n de Corporativo Zell incluye:
+a) la informaci�n documentada requerida por la norma ISO 9001:2015 e ISO 27001:2022;
+b) la informaci�n documentada que Corporativo Zell determina como necesaria para la eficacia del Sistema de Gesti�n.
+7.5.2. Creaci�n y actualizaci�n
+Al crear y actualizar la informaci�n documentada, Corporativo Zell se asegura de que lo siguiente sea apropiado:
+a) la identificaci�n y descripci�n (por ejemplo, t�tulo, fecha, autor o n�mero de referencia);
+b) el formato (por ejemplo, idioma, versi�n del software, gr�ficos) y los medios de soporte (por ejemplo, papel, electr�nico);
+c) la revisi�n y aprobaci�n con respecto a la conveniencia y adecuaci�n.
+Esto de acuerdo con el procedimiento Elaboraci�n de documentos (P-SGCSI-01), Procedimiento de Control de Documentos (P-SGCSI-03) y Procedimiento de Control de Registros (P-SGCSI-02).
+7.5.3. Control de la informaci�n documentada
+La informaci�n documentada requerida por el sistema de gesti�n y por las normas aplicables se controla para asegurarse de que:
+a) est� disponible y es id�nea para su uso, donde y cuando se necesite;
+b) est� protegida adecuadamente (por ejemplo, contra p�rdida de la confidencialidad, uso inadecuado o p�rdida de integridad).
+Para el control de la informaci�n documentada, Corporativo Zell aborda las siguientes actividades, seg�n corresponda:
+a) distribuci�n, acceso, recuperaci�n y uso;
+b) almacenamiento y preservaci�n, incluida la preservaci�n de la legibilidad;
+c) control de cambios (por ejemplo, control de versi�n);
+d) conservaci�n y disposici�n.
+Se cuenta con un listado maestro de documentos (F-SGCSI-01) y un listado maestro de registros (F-SGCSI-02) en el cual se establece el tiempo, lugar de almacenamiento de cada uno de los documentos que conforman el SGCSI.
+La informaci�n documentada de origen externo, que Corporativo Zell determina como necesaria para la planificaci�n y operaci�n del sistema de gesti�n, se identifica, seg�n sea apropiado, y se controla.
+Esto de acuerdo con el procedimiento de Control de documentos (P-SGCSI-03).
+8 OPERACI�N
+8.1 Planificaci�n y control operacional
+Corporativo Zell planifica, implementa y controla los procesos seg�n la Secuencia e Interacci�n de procesos (mapeo) (F-SGCSI-21) y el Diagrama de Tortuga (F-SGC-03) necesarios para cumplir los requisitos (iniciales y operacionales, v�ase punto 8.2.2) para la provisi�n de productos y servicios, y para implementar las acciones derivadas del proceso de apreciaci�n de riesgos determinadas en el cap�tulo 6, mediante:
+a) Pol�tica y objetivos del SGCSI.
+b) la determinaci�n de los requisitos para los productos y servicios a trav�s de los contratos del cliente;
+c) el establecimiento de criterios para:
+1) los procesos (ver procedimiento de Solicitud de atenci�n P-OPR-01);
+2) la aceptaci�n de los productos y servicios;
+d) Las apreciaciones de riesgos realizadas.
+e) Los cambios planificados y las consecuencias de los cambios no previstos.
+f) la determinaci�n de los recursos necesarios para lograr la conformidad con los requisitos de los productos y servicios (ver Diagrama de Tortuga F-SGC-03);
+g) Las etapas y actividades de control, verificaci�n y seguimiento, as� como los criterios de aceptaci�n de riesgos y los responsables de llevarlas a cabo.
+h) La implementaci�n de los controles como el dashboard y el sistema Zell Tickets, para asegurar los procesos de acuerdo con los criterios;
+i) la determinaci�n, el mantenimiento y la conservaci�n de la informaci�n documentada dentro del sistema Zell Tickets, en la extensi�n necesaria para:
+1) tener confianza en que los procesos se han llevado a cabo seg�n lo planificado;
+2) demostrar la conformidad de los productos y servicios con sus requisitos.
+j) Los procesos contratados externamente garantizando que est�n controlados.
+La salida de esta planificaci�n es adecuada para las operaciones de Corporativo Zell.
+Corporativo Zell controla los cambios planificados (6.3) seg�n lo establecido en el punto 8.2.4 del presente manual y revisa las consecuencias de los cambios no previstos, tomando acciones para mitigar cualquier efecto adverso, seg�n sea necesario.
+Corporativo Zell se asegura de que los procesos contratados externamente est�n controlados (v�ase 8.4).
+Corporativo Zell dispone de una sistem�tica para la gesti�n de los cambios, de manera que �stos se realicen de manera planificada y sistem�tica. Para ello, se tiene en consideraci�n:
+
+* El prop�sito del cambio y cualquiera de sus potenciales consecuencias.
+* La integridad del sistema de gesti�n.
+* La disponibilidad de recursos.
+* La asignaci�n o reasignaci�n de responsabilidades y autoridades por medio de los anexos a cada descriptivo de puesto (DP-RH-NN).
+En esta planificaci�n de los cambios, los trata y eval�a durante la revisi�n por la Direcci�n, recogiendo la informaci�n necesaria en el procedimiento de Gesti�n de cambios (P-SGCSI-07).
+8.2 Requisitos para los productos y servicios (9001)
+8.2.1. Comunicaci�n con el cliente
+La comunicaci�n con los clientes incluye:
+a) proporcionar la informaci�n relativa al servicio;
+b) tratar las consultas, los contratos o los pedidos, incluyendo los cambios;
+c) obtener la retroalimentaci�n de los clientes relativa a los servicios, incluyendo las quejas de los clientes;
+d) manipular o controlar la propiedad del cliente;
+e) establecer los requisitos espec�ficos para las acciones de contingencia, cuando sea pertinente.
+La comunicaci�n con el cliente, de acuerdo con los aspectos mencionados se lleva a cabo seg�n la Tabla de comunicaci�n interna y externa (F-RH-05).
+8.2.2. Determinaci�n de los requisitos para los productos y servicios
+Cuando se determinan los requisitos para los productos y servicios que se van a ofrecer a los clientes, Corporativo Zell se segura de       que:
+a) los requisitos para los productos y servicios se definen, incluyendo:
+1) cualquier requisito legal y reglamentario aplicable;
+2) aquellos considerados necesarios por Corporativo Zell;
+b) Corporativo Zell puede cumplir con las declaraciones acerca de los productos y servicios que ofrece.
+Los requisitos de los clientes se determinan a trav�s del primer contacto con el cliente por parte del Consejo Directivo, donde cada cliente expresa sus necesidades y/o requisitos para posteriormente presentar la propuesta del servicio que Corporativo Zell puede ofrecerle (v�ase el formato Diagrama de Tortuga (F-SGC-03) en el apartado de Consejo Directivo).
+8.2.3. Revisi�n de los requisitos para los productos y servicios
+Corporativo Zell se asegura de que tiene la capacidad de cumplir los requisitos para los productos y servicios que se van a ofrecer a los clientes. Corporativo Zell a trav�s del Consejo Directivo, lleva a cabo una revisi�n de los requisitos del cliente antes de comprometerse a suministrar los servicios, e incluye:
+a) los requisitos especificados por el cliente, incluyendo los requisitos para las actividades de entrega y las posteriores a la misma;
+b) los requisitos no establecidos por el cliente, pero necesarios para el uso especificado o previsto, cuando sea conocido;
+c) los requisitos especificados por Corporativo Zell;
+d) los requisitos legales y reglamentarios aplicables a los productos y servicios;
+e) las diferencias existentes entre los requisitos del contrato o pedido y los expresados previamente.
+La revisi�n de los requisitos iniciales se lleva a cabo por parte del Consejo Directivo; esta revisi�n se realiza al firmar el contrato entre Corporativo Zell y el cliente, donde se especifican las condiciones del servicio de acuerdo con sus necesidades (v�ase el formato Diagrama de Tortuga (F-SGC-03) en el apartado de Consejo Directivo).
+Los requisitos operacionales se determinan al registrar la solicitud de atenci�n de acuerdo con el Procedimiento de Solicitud de Atenci�n (P-OPR-01), asegurando que se resuelven las diferencias existentes entre los requisitos del contrato y los expresados previamente.
+Corporativo Zell confirma los requisitos del cliente antes de la aceptaci�n, cuando el cliente no proporcione una declaraci�n documentada de sus requisitos.
+Corporativo Zell conserva la informaci�n documentada a trav�s de los tickets o Solicitudes de Atenci�n generados en el sistema Zell Tickets, cuando sea aplicable:
+a) sobre los resultados de la revisi�n;
+b) sobre cualquier requisito nuevo para los productos y servicios.
+
+8.2.4. Cambios en los requisitos para los productos y servicios
+Corporativo Zell asegura de que, cuando se cambien los requisitos para los productos y servicios, la informaci�n documentada pertinente sea modificada, y de que las personas pertinentes sean conscientes de los requisitos modificados.	
+Cuando se modifican los requisitos despu�s la apertura de un contrato: si el cambio (solicitud de atenci�n) es menor este debe quedar registrado en un ticket para notificar a los involucrados y llevarse a cabo el mismo, si el cambio es mayor y genera alg�n costo, se debe solicitar la autorizaci�n del cliente con el ajuste econ�mico y tambi�n se registra a trav�s de una Solicitud de Atenci�n.
+8.2. Apreciaci�n de riesgos de seguridad de la informaci�n (27001)
+Corporativo ZELL realiza apreciaciones de riesgos de seguridad de la informaci�n a intervalos planificados, cuando se propongan o se produzcan modificaciones importantes, teniendo en cuenta los criterios establecidos en el punto 6.1.1. 
+se conserva la informaci�n documentada en la matriz de riesgos por activos (F-SGSI-01) y en el AMEF (F-SGCSI-04).
+
+8.3. Tratamiento de los riesgos de seguridad de la informaci�n (27001) 
+Se implementa el plan de tratamiento de riesgos de seguridad de la informaci�n de acuerdo con el plan de tratamiento de riesgos (F-SGCSI-23) y los resultados del plan en el informe de evaluaci�n de riesgos (F-SGCSI-24).
+Adicional, se cuenta con procedimiento de Gesti�n de Incidentes (P-SGSI-10) donde se establece la metodolog�a de tratamiento y gesti�n de incidentes relacionados a la seguridad de la informaci�n.
+8.3. Dise�o y desarrollo de los productos y servicios (9001)
+No aplica (Ver justificaci�n en 4.3)
+8.4. Control de los procesos, productos y servicios suministrados externamente (9001)
+8.4.1. Generalidades
+Corporativo Zell se asegura de que los procesos, productos y servicios suministrados externamente son conformes a los requisitos.
+Corporativo Zell determina y aplica criterios para la evaluaci�n, la selecci�n, el seguimiento del desempe�o y la reevaluaci�n de los proveedores externos, bas�ndose en su capacidad para proporcionar procesos o productos y servicios de acuerdo con los requisitos. Corporativo Zell conserva la informaci�n documentada de estas actividades y de cualquier acci�n necesaria que surja de las evaluaciones mediante el Procedimiento de Selecci�n y Evaluaci�n de Proveedores (P-INF-01).
+Los proveedores cr�ticos que afectan la correcta operaci�n de Atenci�n a Clientes de Corporativo Zell son:
+
+* Renta de oficina
+* Conectividad y administraci�n de redes
+* Servidores
+* Internet y telefon�a
+* Capacitaciones, cursos o consultor�a (cuando aplique)
+* Almacenamiento en la nube
+8.4.2. Tipo y alcance del control
+Corporativo Zell se asegura de que los procesos, productos y servicios suministrados externamente no afectan de manera adversa su capacidad de entregar productos y servicios conformes de manera coherente a sus clientes.
+Corporativo Zell se:
+a) asegura de que los procesos suministrados externamente permanecen dentro del control de su sistema de gesti�n;
+b) define los controles que pretende aplicar a un proveedor externo y los que pretende aplicar a las salidas resultantes;
+c) tiene en consideraci�n:
+1) el impacto potencial de los procesos, productos y servicios suministrados externamente en la capacidad de la organizaci�n de cumplir regularmente los requisitos del cliente y los legales y reglamentarios aplicables;
+2) la eficacia de los controles aplicados por el proveedor externo;
+
+d) determina la verificaci�n, u otras actividades necesarias para asegurarse de que los procesos, productos y servicios suministrados externamente cumplen los requisitos.
+Se cuenta con un procedimiento de selecci�n y evaluaci�n de proveedores (P-INF-01), el cual establece los controles que se llevan a cabo para los procesos externos, compras o subcontrataciones establecidos como cr�ticos para el proceso.
+
+
+8.4.3. Informaci�n para los proveedores externos
+Corporativo Zell se asegura de la adecuaci�n de los requisitos antes de su comunicaci�n al proveedor externo. Corporativo Zell comunica a los proveedores externos sus requisitos para:
+a) los procesos, productos y servicios a proporcionar;
+b) la aprobaci�n de:
+1) productos y servicios;
+2) m�todos, procesos y equipos;
+3) la liberaci�n de productos y servicios;
+c) la competencia, incluyendo cualquier calificaci�n requerida de las personas;
+d) las interacciones del proveedor externo con la organizaci�n;
+e) el control y el seguimiento del desempe�o del proveedor externo a aplicar por parte de la organizaci�n;
+La comunicaci�n con los proveedores se lleva a cabo de forma telef�nica y por correo electr�nico, donde se solicitan las caracter�sticas de los productos/servicios a recibir, as� como por medio de los contratos de prestaciones de servicio.
+8.5. Producci�n y provisi�n del servicio (9001)
+8.5.1. Control de la producci�n y de la provisi�n del servicio
+Corporativo Zell, implementa la provisi�n del servicio bajo condiciones controladas incluyen cuando sea aplicable:
+a) la disponibilidad de informaci�n documentada, la cual se encuentra en el procedimiento de Solicitud de atenci�n (P-OPR-01) que define:
+1) las caracter�sticas de los servicios a prestar, o las actividades a desempe�ar; 
+2) los resultados a alcanzar; 
+b) la disponibilidad y el uso de los recursos de seguimiento y medici�n adecuados (ver (7.1.5.1);
+c) la implementaci�n de actividades de seguimiento y medici�n en las etapas apropiadas para verificar que se cumplen los criterios para el control de los procesos o sus salidas, y los criterios de aceptaci�n para los productos y servicios;
+d) el uso de la infraestructura y el entorno adecuados para la operaci�n de los procesos (7.1.5.2);
+e) la designaci�n de personas competentes, incluyendo cualquier calificaci�n requerida (ver competencia 7.2 y perfiles de puesto);
+f) la validaci�n y revalidaci�n peri�dica de la capacidad para alcanzar los resultados planificados de    los procesos de producci�n y de prestaci�n del servicio, cuando las salidas resultantes no puedan verificarse mediante actividades de seguimiento o medici�n posteriores (no aplica debido a que las mediciones se realizan conforme a cada etapa del proceso, ver justificaci�n en 4.3);
+g) la implementaci�n de acciones para prevenir los errores humanos;
+h) la implementaci�n de actividades de liberaci�n, entrega y posteriores a la entrega (ver 8.6).
+
+
+8.5.2. Identificaci�n y trazabilidad
+Corporativo Zell, identifica y rastrea los servicios realizados a trav�s de un folio �nico consecutivo, que se genera en la Solicitud de Atenci�n.
+La informaci�n documentada que permite la trazabilidad del servicio se encuentra en el sistema de Zell Tickets y refleja cada uno de los estatus de la Solicitud de Atenci�n.
+8.5.3. Propiedad perteneciente a los clientes o proveedores externos
+Corporativo Zell considera en los diferentes procesos como propiedad del cliente lo siguiente:
+Tipo de propiedad: Datos personales del cliente
+Ejemplo: Informaci�n comercial y fiscal del cliente.
+�C�mo se controla? Convenios de confidencialidad (con cliente/empleados)
+Tipo de propiedad: Propiedad intelectual
+Ejemplo: Informaci�n de operaci�n de cada uno de los clientes que se encuentra en el sistema Zell Tickets.
+�C�mo se controla? Respaldos diarios a servidor, y el acceso al servidor es controlado. Convenios de confidencialidad.
+
+
+Corporativo Zell identifica, verifica, protege y salvaguarda la propiedad del cliente, incluyendo sus datos personales, para cumplir con los requisitos. 
+
+Si se pierde, da�a, o la propiedad del cliente no es apta para usar, esto deber� ser reportado al cliente por medio de un correo electr�nico y se deben mantener los registros.
+
+8.5.4. Preservaci�n
+
+Corporativo Zell preserva las salidas durante la prestaci�n del servicio mediante lo siguiente: 
+La informaci�n se identifica por el folio �nico de la Solicitud de Atenci�n, clasificada por cliente, para la manipulaci�n de la informaci�n solo se puede llevar a cabo a trav�s del sistema Zell Tickets, misma que se requiere un usuario y privilegios v�lidos para tener acceso, durante el almacenamiento se generan respaldos diarios de la informaci�n, y estos se protegen con un acceso controlado a la informaci�n de los servidores.
+8.5.5. Actividades posteriores a la entrega
+Corporativo Zell cumple los requisitos para las actividades posteriores a la entrega asociadas con los productos y servicios.
+Al determinar el alcance de las actividades posteriores a la entrega que se requieren, la considera:
+a) los requisitos legales y reglamentarios;
+b) las consecuencias potenciales no deseadas asociadas a sus productos y servicios;
+c) la naturaleza, el uso y la vida �til prevista de sus productos y servicios;
+d) los requisitos del cliente;
+e) la retroalimentaci�n del cliente.
+Dentro de las actividades posteriores a la entrega se consideran: 
+a) La entrega del servicio realizado es por medio de un ambiente de pruebas habilitado para el cliente, en el cual verifica que lo entregado cumple con las especificaciones pactadas. En caso de encontrar fallas, el cliente tiene oportunidad de notificarlo a Zell, quienes realizar�n las acciones pertinentes para corregirlo. Si el cliente solicita requerimientos mayores o distintos a los pactados en un inicio, se abrir� un nuevo ticket.
+b) Se entrega al cliente una gu�a de usuario y se brinda una capacitaci�n de uso del sistema Zell.
+c) Se incluye la retroalimentaci�n del cliente como acciones posteriores y para atender cualquier soporte o adiciones que necesite.
+d) Se realizan Encuestas de Servicio (F-OPR-01) y Encuestas de Satisfacci�n (F-OPR-02) para conocer la percepci�n del cliente en cuanto al servicio proporcionado. Adem�s, en los correos emitidos por el sistema Zell Tickets se incluye la leyenda �Si tienes alguna queja o sugerencia de favor env�anos tu correo a: Direcci�n de Operaciones� en donde se incluye el correo del Director de Operaciones para atender las quejas o sugerencias presentadas.
+e) Se realizan juntas semanales donde se tocan los temas m�s importantes de la semana, incluyendo quejas de clientes, si las hubiera para as�, en conjunto, proponer soluciones.
+f) Se puede generar la necesidad de realizar una acci�n correctiva por quejas constantes de clientes, de la misma naturaleza u origen (v�ase Procedimiento de Acciones Correctivas P-SGCSI-06).
+8.5.6. Control de los cambios
+Corporativo Zell no realiza cambios para la prestaci�n del servicio, pero en caso de que pudieran surgir cambios que apliquen, los revisa y controla en la extensi�n necesaria para asegurarse de la continuidad en la conformidad con los requisitos.
+Cuando el cambio sea por parte del cliente, el tratamiento de dicho cambio se realiza como lo especificado en el apartado 8.2.4; si es un cambio interno este debe ser autorizado y notificado a los involucrados por parte de la Direcci�n de Operaciones y /o alta direcci�n. 
+8.6. Liberaci�n de los productos y servicios (9001)
+La liberaci�n de los servicios se lleva a cabo a trav�s de las autorizaciones del cliente como respuesta a un correo electr�nico enviado por el especialista de producto, en caso de que el cliente no responda en m�s de 30 d�as, se puede notificar al mismo que la solicitud de atenci�n procede a cerrarse.
+8.7. Control de las salidas no conformes (9001)
+Corporativo Zell se asegura de que las salidas que no sean conformes con sus requisitos se identifican y se controlan para prevenir su uso o entrega no intencionada.
+Corporativo Zell toma las acciones adecuadas bas�ndose en la naturaleza de la no conformidad y en su efecto sobre la conformidad de los productos y servicios. Esto se debe aplicar tambi�n a los productos y servicios no conformes detectados despu�s de la entrega de los productos, durante o despu�s de la provisi�n de los servicios.
+Corporativo Zell debe tratar las salidas no conformes de una o m�s de las siguientes maneras:
+
+a) Correcci�n;
+b) separaci�n, contenci�n, devoluci�n o suspensi�n de provisi�n de productos y servicios;
+c) informaci�n al cliente;
+d) obtenci�n de autorizaci�n para su aceptaci�n bajo concesi�n.
+
+Se verifica la conformidad con los requisitos cuando se corrigen las salidas no conformes.
+
+Corporativo Zell conserva la informaci�n documentada que:
+
+a) describe la no conformidad;
+
+b) describe las acciones tomadas;
+
+c) describe todas las concesiones obtenidas;
+
+d) identifica la autoridad que decide la acci�n con respecto a la no conformidad.
+
+Esto se realiza por medio del Procedimiento de Salidas No Conformes (P-SGC-01).
+9.EVALUACI�N DEL DESEMPE�O
+9.1. Seguimiento, medici�n, an�lisis y evaluaci�n
+9.1.1. Generalidades
+Corporativo Zell aplica m�todos apropiados para el seguimiento, y cuando sea aplicable la medici�n de los procesos del Sistema de Gesti�n, demostrando de este modo la capacidad para alcanzar los resultados planificados. Estas actividades permiten evaluar los procesos de forma continua tomando las medidas oportunas y, en caso de necesidad, corregir las no conformidades que se detecten, antes de que �stas puedan influir de alg�n modo a las actividades de la empresa.
+Para medir los principales procesos de la organizaci�n se emplea una sistem�tica basada en unos indicadores que se gestionan de acuerdo con el proceso de seguimiento y medici�n de procesos (P-SGSI-13).
+Cuando no se alcanzan los resultados esperados se aplica el Procedimiento de acciones correctivas (P-SGCSI-06).
+9.1.2. Satisfacci�n del cliente
+
+Como parte de recibir y atender la percepci�n de la satisfacci�n al cliente, en Corporativo ZELL se llevan a cabo las siguientes acciones.
+a) Encuestas de satisfacci�n: Anual y por servicio. La Encuesta de Satisfacci�n (F-OPR-02) ser� contestada por los clientes en f�sico o digital, seg�n convenga, y est� enfocada en recibir y atender la percepci�n de la satisfacci�n del cliente en los niveles directivos de manera global con Zell y sus colaboradores. La Encuesta de Servicio (F-OPR-01) ser� contestada por los clientes al enviarla por medio del sistema Zell Tickets a sus respectivos correos electr�nicos una vez que se concluya la Solicitud de Atenci�n y est� enfocada en recibir y atender la percepci�n de la satisfacci�n del cliente con relaci�n al servicio recibido espec�ficamente para cada Solicitud de Atenci�n.
+b) Retroalimentaci�n del cliente: Donde se recibe informaci�n del cliente que se aprovecha para tomar decisiones en beneficio de este.
+c) Reuniones con el cliente: Se llevan a cabo visitas al menos una vez al a�o.
+9.1.3. An�lisis y evaluaci�n
+Corporativo Zell analiza y eval�a los datos y la informaci�n apropiados que surgen por el seguimiento y la medici�n.
+Todos los datos obtenidos como consecuencia de la implantaci�n del SGCSI dan una informaci�n relevante sobre el funcionamiento de este y sobre el estado general de la organizaci�n. Por lo que para ello la organizaci�n determina:
+* La gesti�n de riesgos y controles aplicados.
+* A qu� se necesita hacer seguimiento, qu� es necesario medir, sin olvidar incluir procesos y controles.
+* Las t�cnicas de seguimiento, medici�n, an�lisis y evaluaci�n requeridas para garantizar que los resultados son v�lidos.
+* Cuando se ha de ejecutar tanto el seguimiento como la medici�n.
+* Qui�n es el responsable de la ejecuci�n del seguimiento y medici�n.
+* Cuando es necesario analizar y evaluar los resultados de seguimiento y medici�n.
+* Qui�n ser� el responsable de analizar y evaluar dichos resultados.
+Dichos indicadores son analizados en el preciso instante en el que son cumplimentados, tomando las acciones oportunas, aunque tambi�n son analizados durante la Revisi�n de Sistema por la Direcci�n.
+
+9.2. Auditor�a interna
+Corporativo Zell lleva a cabo auditor�as internas a intervalos planificados de acuerdo con el Plan de Auditor�a (F-SGCSI-08) anualmente, para proporcionar informaci�n acerca de si el sistema de gesti�n:
+a) es conforme con:
+1. los requisitos propios de la organizaci�n para su sistema de gesti�n;
+2. los requisitos de las Normas Internacionales aplicables;
+b) se implementa y mantiene eficazmente.
+Corporativo Zell:
+a) planifica, establece, implementa y mantiene uno o varios programas de auditor�a que incluyan la frecuencia, los m�todos, las responsabilidades, los requisitos de planificaci�n y la elaboraci�n de informes, que deben tener en consideraci�n la importancia de los procesos involucrados, los cambios que afecten a la organizaci�n y los resultados de las auditor�as previas;
+b) define los criterios de la auditor�a y el alcance para cada auditor�a;
+c) selecciona los auditores y lleva a cabo auditor�as para asegurarse de la objetividad y la imparcialidad del proceso de auditor�a;
+d) se asegura de que los resultados de las auditor�as se informen a la direcci�n pertinente;
+e) realiza las correcciones y tomar las acciones correctivas adecuadas sin demora injustificada;
+f) conserva informaci�n documentada como evidencia de la implementaci�n del programa de auditor�a y de los resultados de las auditor�as.
+Esto por medio del Procedimiento de Auditor�a Interna (P-SGCSI-05).
+9.3. Revisi�n por la direcci�n
+9.3.1. Generalidades
+La alta direcci�n revisa el sistema de gesti�n de forma semestral, para asegurarse de su conveniencia, adecuaci�n, eficacia y alineaci�n continuas con la direcci�n estrat�gica de la Organizaci�n por medio del Informe Revisi�n por la Direcci�n (F-SGCSI-25).
+9.3.2. Entradas de la revisi�n por la direcci�n
+La revisi�n por la direcci�n se planifica y se lleva a cabo incluyendo consideraciones sobre:
+a) el estado de las acciones de las revisiones por la direcci�n previas;
+b) los cambios en las cuestiones externas e internas que sean pertinentes al sistema de gesti�n;
+c) la informaci�n sobre el comportamiento de la seguridad de la informaci�n, el desempe�o y la eficacia del sistema de gesti�n, incluida las tendencias relativas a:
+1) la satisfacci�n del cliente y la retroalimentaci�n de las partes interesadas pertinentes;
+2) el grado en que se han logrado los objetivos de la calidad y seguridad de la informaci�n;
+3) el desempe�o de los procesos y conformidad de los productos y servicios;
+4) las no conformidades y acciones correctivas;
+5) los resultados de seguimiento y medici�n;
+6) los resultados de las auditor�as;
+7) el desempe�o de los proveedores externos;
+8) incidentes de seguridad 
+d) la adecuaci�n de los recursos;
+e) la eficacia de las acciones tomadas para abordar los riesgos y las oportunidades (v�ase 6.1);
+f) las oportunidades de mejora y plan de mejora continua.
+g) Resultados de la apreciaci�n al riesgo: An�lisis de riesgos, el plan de tratamiento de riesgos, y las m�tricas de seguridad.
+h) Verificaci�n del cumplimiento de control y supervisi�n previstos en la aplicaci�n Activos de Informaci�n con revisi�n expresa de: Copias de Seguridad, Accesos e Instrucciones, uso de la red y cumplimiento de pol�ticas por parte de los colaboradores.
+* Otros factores que puedan afectar al funcionamiento de la empresa y al SGCSI
+* Cambios internos y/o externos que afecten al SGCSI
+9.3.3. Salidas de la revisi�n por la direcci�n
+
+Las salidas de la revisi�n por la direcci�n incluyen las decisiones y acciones relacionadas con:
+a) las oportunidades de mejora y plan de mejora continua;
+b) cualquier necesidad de cambio en el sistema de gesti�n;
+c) las necesidades de recursos.
+Corporativo Zell debe conservar informaci�n documentada como evidencia de los resultados de las revisiones por la direcci�n por medio del Informe Revisi�n por la direcci�n (F-SGCSI-25).
+10. MEJORA
+10.1. Generalidades (9001)
+Corporativo Zell determina y selecciona las oportunidades de mejora e implementa cualquier acci�n necesaria para cumplir los requisitos del cliente y aumentar la satisfacci�n del cliente y se registran en el proyecto de mejora y/o cambio.
+�stas incluyen:
+a) mejorar a los productos y/o servicios para cumplir los requisitos, as� como considerar las necesidades y expectativas futuras;
+b) corregir, prevenir o reducir los efectos no deseados;
+c) mejorar el desempe�o y la eficacia del sistema de gesti�n.
+Se llevan a cabo correcciones a los problemas presentados, si estos son fuertes o recurrentes se inicia una acci�n correctiva, en caso de aplicar innovaci�n, estas se eval�an y autorizan en caso de que sean positivas para la organizaci�n se registran las mejoras en el Sistema Zell Tickets, o en caso de mejoras derivadas de la revisi�n por la direcci�n, en el formato de Proyecto de Cambio (F-SGCSI-21).
+10.2. No conformidad y acci�n correctiva (10.1 en 27001, 10.2 en 9001)
+Cuando ocurra una no conformidad, incluida cualquiera originada por quejas, Corporativo Zell:
+a) reacciona ante la no conformidad y, cuando sea aplicable:
+1) toma acciones para controlarla y corregirla;
+2) hace frente a las consecuencias;
+b) eval�a la necesidad de acciones para eliminar las causas de la no conformidad, con el fin de que no vuelva a ocurrir ni ocurra en otra parte, mediante:
+1) la revisi�n y el an�lisis de la no conformidad;
+2) la determinaci�n de las causas de la no conformidad;
+3) la	determinaci�n	de	si	existen no	conformidades	similares,	o	que potencialmente puedan ocurrir;
+c) implementar cualquier acci�n necesaria;
+d) revisa la eficacia de cualquier acci�n correctiva tomada;
+e) si fuera necesario, actualiza los riesgos y oportunidades determinados durante la planificaci�n; y
+f) si fuera necesario, hace cambios al sistema de gesti�n.
+Las acciones correctivas son apropiadas a los efectos de las no conformidades encontradas.
+Corporativo Zell conserva informaci�n documentada como evidencia de:
+a) la naturaleza de las no conformidades y cualquier acci�n tomada posteriormente;
+b) los resultados de cualquier acci�n correctiva.
+Esto se realiza por medio del Procedimiento de Acciones Correctivas (P-SGCSI-06).
+10.3. Mejora continua (10.3 en 9001, 10.2 en 27001)
+Corporativo Zell mejora continuamente la conveniencia, adecuaci�n y eficacia del sistema de gesti�n de la calidad.
+Corporativo Zell considera los resultados del an�lisis y la evaluaci�n, y las salidas de la revisi�n por la direcci�n, para determinar si hay necesidades 
+u oportunidades que deben considerarse como parte de la mejora continua. As� como los resultados de la encuesta de clima laboral (Formato externo), FODA (F-SGCSI-15) y de auditor�as internas y externas, pol�tica y objetivos de SGCSI.
+Derivado de las revisiones por la direcci�n y el an�lisis de datos se acuerdan entre los asistentes las mejoras que deben implementarse en el sistema y estas se registran en el formato de Proyecto de Cambio (F-SGCSI-18).
+
+11. DOCUMENTOS INTERRRELACIONADOS
+* Norma ISO 9001:2015
+* Norma ISO 27001:2022
+
+12. CONTROL DE CAMBIOS
+
+Revisi�n: 04
+Cambio: Se agrega punto 8.5.5.1
+Fecha: 19/03/2020
+
+Revisi�n: 05
+Cambio: Se ajusta punto 8.2.3.1 para especificar los requisitos iniciales y operacionales del cliente
+Fecha: 12/05/2020
+
+Revisi�n: 06
+Cambio: -Se agrega manual y pol�tica de prevenci�n de riesgos psicosociales en 7.1.4
+-Se especifica en 8.1 los requisitos que se dividen en iniciales y operacionales y el control de cambios
+Fecha: 13/11/2020
+
+Revisi�n: 07
+Cambio: -Se cambia nombre de �Manual de Calidad� a �Manual de Calidad y Seguridad de la Informaci�n�
+-Se integra en pol�tica de calidad lo referente a la seguridad de la informaci�n
+-Se agrega todo lo referente al cumplimiento de la norma ISO 27001:2013 sobre Seguridad de la Informaci�n
+Fecha: 14/01/2022
+
+Revisi�n: 08
+Cambio: Se agrega en 4.3 determinaci�n del alcance la referencia de la declaraci�n de aplicabilidad
+Fecha: 14/03/2023
+
+Revisi�n: 09
+Cambio: Se agrega exclusi�n de 8.4.3 inciso f verificaci�n en instalaciones del proveedor externo y 6.2.2 Teletrabajo
+Fecha: 10/07/2023
+
+Revisi�n: 10
+Cambio: *Se agrega en 4.1 y 4.2 integrar en el an�lisis los posibles requerimientos relacionados al cambio clim�tico y sus impactos
+*En 4.3 se agrega inciso d) relacionado a interfaces y dependencias de actividades
+*En 5.1.1 se agrega la revisi�n por la direcci�n y apoyo a personal como parte del liderazgo de la Alta Direcci�n
+Fecha: 23/04/2024
+
+Revisi�n: 11
+Cambio: *4.3 inciso e) se agrega lo referente al cambio clim�tico
+*En 5.2.1 se actualiza pol�tica de calidad y seguridad para integrar lo referente a sostenibilidad
+Fecha: 12/08/2024
+
+Revisi�n: 12
+Cambio: *Se integra el buz�n de �tica en el 8.3 y gu�a de usuario del SGCSI
+*Se actualizan c�digos de documentos referenciados
+*Se agrega SGCSI en c�digo
+
+
+
+
+
+
+

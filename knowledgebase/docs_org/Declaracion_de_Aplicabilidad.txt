@@ -1,0 +1,421 @@
+Nombre del documento: Declaraci�n de Aplicabilidad
+Fecha de emisi�n: 25/11/2024
+Revisi�n: 03
+C�digo: F-SGSI-03
+
+DECLARACI�N DE APLICABILIDAD
+
+1. Objetivo y alcance
+El objetivo del presente documento es definir qu� controles son adecuados para implementar en Corporativo Zell, cu�les son los objetivos de esos controles y c�mo se implementan. As� como el aprobar riesgos iniciales y aprobar formalmente la implementaci�n de los controles mencionados. 
+Este documento incluye todos los controles detallados en el Anexo A de la norma ISO 27001:2022.  Los controles se aplican a todo el alcance del Sistema de Gesti�n de Seguridad de la Informaci�n (SGSI), relativo al proceso de atenci�n a clientes y su ciclo de vida definido en el P-OPR-01 Procedimiento de Solicitud de atenci�n.
+Los usuarios de este documento son todos empleados de Corporativo Zell que cumplen una funci�n dentro del SGSI.
+Esta declaraci�n de aplicabilidad se revisa el: 25/11/2024
+
+
+
+2. Aplicabilidad de los controles
+Son aplicables los siguientes controles del Anexo A de la norma ISO 27001:
+
+Nombre de tabla: A.5 CONTROLES ORGANIZACIONALES
+
+Descripci�n: 5.1. Pol�ticas para la seguridad de la informaci�n
+Control: La pol�tica de seguridad de la informaci�n y un conjunto de pol�ticas tem�ticas espec�ficas deben ser definidas, aprobadas por la direcci�n, publicadas, comunicadas y reconocidas por el personal pertinente y las partes interesadas relevantes, y revisadas a intervalos planificados y si se producen cambios significativos.
+Aplicabilidad (S�/NO): S�
+Documento o justificaci�n Estado: Pol�tica en p�gina web, Dashboard y M-SGCSI-01 Manual de Calidad y Seguridad de la Informaci�n apartado 5.2.1 F-SGCSI-20 Carta Compromiso Se revisa de manera anual (apartado 5.2.2 del M-SGCSI-01 Manual de Calidad y Seguridad de la informaci�n), �ltima revisi�n durante F-SGCSI- revisi�n por la direcci�n 09/02/2024
+Descripci�n: 5.2. Roles y responsabilidades en seguridad de la informaci�n
+Control: Todos los roles y responsabilidades de seguridad de la informaci�n deben definirse y asignarse de acuerdo con las necesidades de la organizaci�n.
+Aplicabilidad (S�/NO): S�
+Documento o justificaci�n Estado: P-SGSI-01 Organizaci�n de la informaci�n apartado 5.1.1 DP-RH-NN Descriptivos de Puesto M-SGC-01 Manual de Calidad y Seguridad de la Informaci�n apartado 5.3 M-SGSI-01 Gu�a de Usuario del SGSI F-RH-02 Cat�logo de Competencias F-RH-08 Organigrama P-SGSI-03 Control de Accesos
+Descripci�n: 5.3. Segregaci�n de tareas
+Control: Las funciones y �reas de responsabilidad en conflicto deben segregarse.
+Aplicabilidad (S�/NO): S�
+Documento o justificaci�n Estado: P-SGSI-01 Organizaci�n de Seguridad de la Informaci�n apartado 5.1.2 F-SGSI-06 Registro de accesos, autorizaciones y bajas Red de invitados en Memoria t�cnica Corporativo Zell � Assetel F-RH-02 Cat�logo de Competencias DP-RH-NN Descriptivos de Puesto F-RH-06 Inducci�n Personal de Nuevo Ingreso P-RH-06 Procedimiento de baja de personal F-RH-14 Registro de Baja de Personal P-SGSI-03 Control de Accesos
+Descripci�n: 5.4. Responsabilidades de la direcci�n
+Control: La direcci�n debe exigir que todo el personal que aplique la seguridad de la informaci�n de acuerdo con la pol�tica de seguridad de la informaci�n, las pol�ticas tem�ticas y sus procedimientos espec�ficos establecidos en la organizaci�n.
+Aplicabilidad (S�/NO): S�
+Documento o justificaci�n Estado: Pol�tica en p�gina web, Dashboard y M-SGC-01 Manual de Calidad y Seguridad de la Informaci�n apartado 5.2.1 F-SGC-29 Carta Compromiso Se revisa de manera anual (apartado 5.2.2 del M-SGS-01 Manual de Calidad y Seguridad de la informaci�n), �ltima revisi�n durante F-SGC-32 revisi�n por la direcci�n 09/02/2024 M-SGSI-01 Gu�a de Usuario del SGSI
+Descripci�n: 5.5 Contacto con las autoridades
+Control: Deben establecerse y mantenerse los contactos adecuados con las autoridades pertinentes
+Aplicabilidad (S�/NO): S�
+Documento o justificaci�n Estado: P-SGSI-01 Organizaci�n de Seguridad de la Informaci�n apartado 5.1.3 P-SGSI-11 Procedimiento de Continuidad del negocio F-RH-16 Plan de Continuidad del Negocio Contactos con autoridades impresos en �reas comunes
+Descripci�n: 5.6 Contacto con grupos de inter�s especial
+Control: Deben establecerse y mantenerse los contactos apropiados con grupos de inter�s especial, u otros foros y asociaciones profesionales especializados en seguridad
+Aplicabilidad (S�/NO): S�
+Documento o justificaci�n Estado: P-SGSI-01 Organizaci�n de Seguridad de la Informaci�n apartado 5.1.3 F-INF-01 Contactos de proveedores en formato de Selecci�n y Evaluaci�n de Proveedores Bolet�n Zell enviado mensualmente con temas de seguridad de la informaci�n Contactos con grupo de inter�s especial en �reas comunes Suscripci�n a bolet�n de seguridad de la informaci�n �Hispasec�.
+Descripci�n: 5.7 Inteligencia de amenazas
+Control: La informaci�n relativa a las amenazas a la seguridad de la informaci�n debe recopilarse y analizarse para producir inteligencia sobre amenazas.
+Aplicabilidad (S�/NO): S�
+Documento o justificaci�n Estado: F-SGCSI-25 Informe Revisi�n por la Direcci�n P-SGSI-08 Inteligencia de amenazas
+Descripci�n: 5.8 Seguridad de la informaci�n en la gesti�n de proyectos
+Control: La seguridad de la informaci�n debe integrarse en la gesti�n de proyectos.
+Aplicabilidad (S�/NO): S�
+Documento o justificaci�n Estado: P-SGSI-01 Organizaci�n de Seguridad de la Informaci�n apartado 5.1.4 P-SGSI-08 Gesti�n de cambios Apartado de propuestas en el Sistema Zell Tickets con an�lisis de seguridad
+Descripci�n: 5.9 Inventario de informaci�n y otros activos asociados
+Control: Debe elaborarse y mantenerse un inventario de la informaci�n y otros activos asociados, incluyendo la identificaci�n de sus propietarios.
+Aplicabilidad (S�/NO): S�
+Documento o justificaci�n Estado: F-SGSI-01 Matriz de riesgos por activos hoja �inventario y mapa� secci�n �inventario de activos�. F-SGCSI- Amef F-SGSI-06 Registro de accesos, autorizaciones y bajas F-SGSI-05 Inventario y distribuci�n de soportes hoja �inventario�
+Descripci�n: 5.10 Uso aceptable de la informaci�n y activos asociados
+Control: Se deben identificar, documentar e implementar reglas para el uso aceptable y procedimientos para el manejo de la informaci�n y otros activos asociados.
+Aplicabilidad (S�/NO): S�
+Documento o justificaci�n Estado: M-SGSI-01 Gu�a de usuario del SGSI F-SGC-29 Carta Compromiso F-SGSI-01 Matriz de riesgos por activos F-SGCSI- Amef Contrato individual de trabajo Contrato de confidencialidad Contrato de obra por encargo y confidencialidad Aviso de privacidad
+Descripci�n: 5.11 Devoluci�n de activos
+Control: Todos los empleados y otras terceras partes, seg�n procedan, deben devolver todos los activos de la organizaci�n en su poder tras el cambio o la terminaci�n de su trabajo, contrato o acuerdo.
+Aplicabilidad (S�/NO): S�
+Documento o justificaci�n Estado: M-SGSI-01 Gu�a de usuario del SGSI P-SGSI-03 Control de Accesos Acta de entrega de puesto de trabajo P-SGSI-01 Organizaci�n de Seguridad de la Informaci�n P-RH-06 Procedimiento de baja de personal
+Descripci�n: 5.12 Clasificaci�n de la informaci�n
+Control: La informaci�n debe clasificarse de acuerdo con las necesidades de seguridad de la informaci�n de la organizaci�n en funci�n de la confidencialidad, integridad, disponibilidad y los requisitos pertinentes a las partes interesadas.
+Aplicabilidad (S�/NO): S�
+Documento o justificaci�n Estado: P-SGC-01 Procedimiento de elaboraci�n de documentos F-SGSI-01 Listado maestro de documentos F-SGSI-02 Listado maestro de registros F-SGSI-01 Matriz de riesgos por activos
+Descripci�n: 5.13 Etiquetado de la informaci�n
+Control: Debe desarrollarse e implantarse un conjunto adecuado de procedimientos para etiquetar la informaci�n, de acuerdo con el esquema de clasificaci�n adoptado por la organizaci�n.
+Aplicabilidad (S�/NO): S�
+Documento o justificaci�n Estado: P-SGC-01 Procedimiento de elaboraci�n de documentos F-SGSI-01 Listado maestro de documentos F-SGSI-02 Listado maestro de registros F-SGSI-01 Matriz de riesgos por activos
+Descripci�n: 5.14 Transferencia de la informaci�n
+Control: Deben existir reglas, procedimientos o acuerdos de transferencia de informaci�n para todo tipo de medios de transferencia dentro de la organizaci�n y entre la organizaci�n y otras partes.
+Aplicabilidad (S�/NO): S�
+Documento o justificaci�n Estado: P-SGC-01 Procedimiento de elaboraci�n de documentos M-SGSI-01 Gu�a de usuario del SGSI
+Descripci�n: 5.15 Control de acceso
+Control: Se deben establecer e implementar reglas de control de acceso f�sico y l�gico a la informaci�n y otros activos asociados, basadas en los requisitos de negocio y de seguridad de la informaci�n.
+Aplicabilidad (S�/NO): S�
+Documento o justificaci�n Estado: P-SGSI-03 Control de accesos F-SGSI-06 Registro de accesos, autorizaciones y bajas M-SGSI-01 Gu�a de Usuario del SGSI P-RH-06 Procedimiento de Baja de Personal F-RH-14 Registro de Baja de Personal
+Descripci�n: 5.16 Gesti�n de identidad
+Control: Se debe gestionar el ciclo de vida completo de las identidades.
+Aplicabilidad (S�/NO): S�
+Documento o justificaci�n Estado: P-RH-03 Procedimiento de Capacitaci�n Nuevo Ingreso F-RH-06 Inducci�n personal nuevo ingreso P-SGSI-03 Control de accesos F-SGSI-06 Registro de accesos, autorizaciones y bajas M-SGSI-01 Gu�a de Usuario del SGSI P-RH-06 Procedimiento de Baja de Personal F-RH-14 Registro de Baja de Personal
+Descripci�n: 5.17 Informaci�n de autenticaci�n
+Control: La asignaci�n y gesti�n de la informaci�n de autenticaci�n debe controlarse mediante un proceso formal de gesti�n, incluyendo el asesoramiento al personal sobre el tratamiento adecuado de la informaci�n de autenticaci�n.
+Aplicabilidad (S�/NO): S�
+Documento o justificaci�n Estado: P-SGSI-03 Control de accesos F-SGSI-06 Registro de accesos, autorizaciones y bajas M-SGSI-01 Gu�a de Usuario del SGSI P-RH-06 Procedimiento de Baja de Personal F-RH-14 Registro de Baja de Personal F-RH-05 Toma de Conciencia F-RH-09 Plan de Capacitaci�n Anual
+Descripci�n: 5.18 Derechos de acceso
+Control: Los derechos de acceso a la informaci�n y otros activos asociados deben aprovisionarse, revisarse, modificarse y eliminarse de conformidad con la pol�tica espec�fica de la organizaci�n y las reglas sobre el control de acceso.
+Aplicabilidad (S�/NO): S�
+Documento o justificaci�n Estado: P-SGSI-03 Control de accesos F-SGSI-06 Registro de accesos, autorizaciones y bajas P-RH-06 Procedimiento de Baja de Personal F-RH-14 Registro de Baja de Personal
+Descripci�n: 5.19. Seguridad de la informaci�n en las relaciones con los proveedores
+Control: Se deben identificar e implementar procesos y procedimientos para gestionar los riesgos de seguridad de la informaci�n asociados con el uso de productos o servicios del proveedor.
+Aplicabilidad (S�/NO): S�
+Documento o justificaci�n Estado: P-INF-01 Procedimiento de Selecci�n y aprobaci�n de proveedores � Pol�tica de seguridad de la informaci�n con proveedores F-INF-01 Selecci�n y evaluaci�n de proveedores M-SGSI-01 Gu�a de Usuario del SGSI
+Descripci�n: 5.20 Abordar la seguridad de la informaci�n dentro de los acuerdos de proveedores
+Control: Deben establecerse y acordarse con cada proveedor los requisitos pertinentes de seguridad de la informaci�n en funci�n del tipo de relaci�n con el proveedor.
+Aplicabilidad (S�/NO): S�
+Documento o justificaci�n Estado: P-INF-01 Procedimiento de Selecci�n y aprobaci�n de proveedores F-INF-01 Selecci�n y evaluaci�n de proveedores M-SGSI-01 Gu�a de Usuario del SGSI Aviso de privacidad Convenio de confidencialidad
+Descripci�n: 5.21 Gesti�n de la seguridad de la informaci�n en la cadena de suministro de las TIC
+Control: Se deben definir e implementar procesos y procedimientos para hacer frente a los riesgos de seguridad de la informaci�n asociados con la cadena de suministro de productos y servicios de tecnolog�a de la informaci�n y las comunicaciones (TIC).
+Aplicabilidad (S�/NO): S�
+Documento o justificaci�n Estado: P-INF-01 Procedimiento de Selecci�n y aprobaci�n de proveedores F-INF-01 Selecci�n y evaluaci�n de proveedores Aviso de privacidad
+Descripci�n: 5.22 Seguimiento, revisi�n y gesti�n del cambio de los servicios de proveedores
+Control: La organizaci�n debe supervisar, revisar, evaluar y gestionar regularmente los cambios en las pr�cticas de seguridad de la informaci�n y prestaci�n de servicios de los proveedores.
+Aplicabilidad (S�/NO): S�
+Documento o justificaci�n Estado: P-INF-01 Procedimiento de Selecci�n y aprobaci�n de proveedores F-INF-01 Selecci�n y evaluaci�n de proveedores
+Descripci�n: 5.23 Seguridad de la informaci�n para el uso de servicios en la nube
+Control: Los procesos de adquisici�n, uso, gesti�n y finalizaci�n de los servicios en la nube deben establecerse de acuerdo con los requisitos de seguridad de la informaci�n de la organizaci�n.
+Aplicabilidad (S�/NO): S�
+Documento o justificaci�n Estado: P-INF-01 Procedimiento de Selecci�n y aprobaci�n de proveedores F-INF-01 Selecci�n y evaluaci�n de proveedores Licencia de uso de servicios en la nube (Google y Microsoft)
+Descripci�n: 5.24 Planificaci�n y preparaci�n de la gesti�n de incidentes de seguridad de la informaci�n
+Control: La organizaci�n debe planificar y prepararse para gestionar los incidentes de seguridad de la informaci�n mediante la definici�n, el establecimiento y la comunicaci�n de los procesos, roles y responsabilidades de gesti�n de incidentes de seguridad de la informaci�n.
+Aplicabilidad (S�/NO): S�
+Documento o justificaci�n Estado: P-SGSI-10 Gesti�n de incidentes F-SGSI-12 Registro de incidencias de seguridad
+Descripci�n: 5.25 Evaluaci�n y decisi�n sobre los eventos de seguridad de informaci�n
+Control: La organizaci�n debe evaluar los eventos de seguridad de la informaci�n y decidir si deben ser catalogados como incidentes de seguridad de la informaci�n.
+Aplicabilidad (S�/NO): S�
+Documento o justificaci�n Estado: P-SGSI-10 Gesti�n de incidentes F-SGSI-12 Registro de incidencias de seguridad
+Descripci�n: 5.26 Respuesta a incidentes de seguridad de la informaci�n
+Control: Los incidentes de seguridad de la informaci�n deben ser respondidos de acuerdo con los procedimientos documentados.
+Aplicabilidad (S�/NO): S�
+Documento o justificaci�n Estado: P-SGSI-10 Gesti�n de incidentes F-SGSI-12 Registro de incidencias de seguridad
+Descripci�n: 5.27 Aprender de los incidentes de seguridad de la informaci�n
+Control: El conocimiento adquirido a partir de los incidentes de seguridad de informaci�n debe utilizarse para fortalecer y mejorar los controles de seguridad de la informaci�n.
+Aplicabilidad (S�/NO): S�
+Documento o justificaci�n Estado: P-SGSI-10 Gesti�n de incidentes F-SGSI-12 Registro de incidencias de seguridad P-SGSI-08 Inteligencia de Amenazas
+Descripci�n: 5.28 Recopilaci�n de evidencias
+Control: La organizaci�n debe establecer e implementar procedimientos para la identificaci�n, recogida, adquisici�n y preservaci�n de evidencias relacionadas con eventos de seguridad de la informaci�n.
+Aplicabilidad (S�/NO): S�
+Documento o justificaci�n Estado: P-SGSI-10 Gesti�n de incidentes F-SGSI-12 Registro de incidencias de seguridad P-SGSI-08 Inteligencia de Amenazas
+Descripci�n: 5.29 Seguridad de la informaci�n durante la interrupci�n
+Control: La organizaci�n debe planificar c�mo mantener la seguridad de la informaci�n a un nivel adecuado durante la interrupci�n.
+Aplicabilidad (S�/NO): S�
+Documento o justificaci�n Estado: P-SGSI-11 Continuidad de Negocio F-SGSI-16 Plan de Continuidad
+Descripci�n: 5.30 Preparaci�n para las TIC para la continuidad del negocio
+Control: La resiliencia de las TIC debe planificarse, implantarse, mantenerse y probarse en funci�n de los objetivos de continuidad del negocio y los requisitos de continuidad de las TIC.
+Aplicabilidad (S�/NO): S�
+Documento o justificaci�n Estado: P-SGSI-11 Continuidad del negocio F-SGSI-16 Plan de continuidad del negocio Se cuenta con respaldos de documentaci�n del SGSI tanto en carpetas de la nube (2 ubicaciones) como en los respaldos realizados semestralmente F-SGC-24 Plan de Mantenimiento P-INF-01 Procedimiento de Selecci�n y Evaluaci�n de Proveedores F-INF-01 Selecci�n y Evaluaci�n de Proveedores
+Descripci�n: 5.31 Identificaci�n de requisitos legales, reglamentarios y contractuales
+Control: Los requisitos legales, estatutarios, reglamentarios y contractuales pertinentes para la seguridad de la informaci�n y el enfoque de la organizaci�n para cumplir con estos requisitos deben ser identificados, documentados y mantenerse actualizados.
+Aplicabilidad (S�/NO): S�
+Documento o justificaci�n Estado: P-SGSI-12 Cumplimiento de los requisitos legales y contractuales F-SGSI-13 Listado de requisitos legales
+Descripci�n: 5.32 Derechos de propiedad intelectual
+Control: La organizaci�n debe implementar procedimientos apropiados para proteger los derechos de propiedad intelectual.
+Aplicabilidad (S�/NO): S�
+Documento o justificaci�n Estado: P-SGSI-12 Cumplimiento de los requisitos legales y contractuales F-SGSI-13 Listado de requisitos legales F-SGSI-14 Listado de Licencias de Software Contratos de trabajo Contrato de confidencialidad
+Descripci�n: 5.33 Protecci�n de los registros
+Control: Los registros deben estar protegidos contra la p�rdida, destrucci�n, falsificaci�n, acceso no autorizado y divulgaci�n no autorizada.
+Aplicabilidad (S�/NO): S�
+Documento o justificaci�n Estado: P-SGSI-12 Cumplimiento de los requisitos legales y contractuales F-SGSI-13 Listado de requisitos legales P-SGC-01 Procedimiento de Elaboraci�n de documentos Convenios con terceros relevantes Registro de facultades de usuarios de clientes Contratos de trabajo Contrato de confidencialidad Contrato de obra por encargo y confidencialidad
+Descripci�n: 5.34 Privacidad y protecci�n de datos de car�cter personal (DCP)
+Control: La organizaci�n debe identificar y cumplir con los requisitos relativos a la preservaci�n de la privacidad y la protecci�n de datos de car�cter personal (DCO), de acuerdo con las leyes y regulaciones aplicables y los requisitos contractuales.
+Aplicabilidad (S�/NO): S�
+Documento o justificaci�n Estado: P-SGSI-12 Cumplimiento de los requisitos legales y contractuales F-SGSI-13 Listado de requisitos legales Convenios con terceros relevantes Registro de facultades de usuarios de clientes Contratos de trabajo Contrato de confidencialidad Contrato de obra por encargo y confidencialidad Aviso de privacidad
+Descripci�n: 5.35 Revisi�n independiente de la seguridad de la informaci�n
+Control: El enfoque de la organizaci�n para la gesti�n de seguridad de la informaci�n y su implementaci�n, incluidos los procesos, la tecnolog�a y las personas, debe revisarse de forma independiente a intervalos planificados o siempre que se produzcan cambios significativos.
+Aplicabilidad (S�/NO): S�
+Documento o justificaci�n Estado: P-SGSI-12 Cumplimiento de los requisitos legales y contractuales F-SGSI-13 Listado de requisitos legales P-SGC-06 Procedimiento de Auditor�as Internas F-SGC-09 Plan de Auditor�a F-SGCSI-06 Programa Anual de Auditor�a F-SGCSI-10 Informe de Auditor�a F-SGC-32 Informe Revisi�n por la Direcci�n
+Descripci�n: 5.36 Cumplimiento de las pol�ticas y normas de seguridad de la informaci�n
+Control: Debe comprobarse peri�dicamente el cumplimiento con la pol�tica de seguridad de la informaci�n, las pol�ticas tem�ticas espec�ficas, las reglas y las normas de la organizaci�n.
+Aplicabilidad (S�/NO): S�
+Documento o justificaci�n Estado: P-SGSI-12 Cumplimiento de los requisitos legales y contractuales F-SGSI-13 Listado de requisitos legales P-SGC-06 Procedimiento de Auditor�as Internas F-SGC-09 Plan de Auditor�a F-SGCSI-06 Programa Anual de Auditor�a F-SGCSI-10 Informe de Auditor�a F-SGC-32 Informe Revisi�n por la Direcci�n F-SGSI-17 Monitoreos internos
+Descripci�n: 5.37 Documentaci�n de procedimientos operacionales
+Control: Deben documentarse los procedimientos operacionales de los medios de tratamiento de la informaci�n y ponerse a disposici�n de todos los usuarios que los necesiten.
+Aplicabilidad (S�/NO): S�
+Documento o justificaci�n Estado: P-OPR-01 Procedimiento de Solicitud de Atenci�n P-SGSI-03 Control de Accesos P-SGSI-07 Seguridad de las Operaciones
+
+Nombre de tabla: A.6 PERSONAS
+Descripci�n: 6.1 Comprobaci�n
+Control: La comprobaci�n de los antecedentes de todos los candidatos al puesto de trabajo se debe llevar a cabo antes de unirse a la organizaci�n y de forma continua, de acuerdo con las leyes, reglamentos y �ticas aplicables, y debe ser proporcional a los requisitos empresariales, la clasificaci�n de la informaci�n a la que se acceder� y los riesgos percibidos.
+Aplicabilidad (S�/NO): S�
+Documento o justificaci�n Estado: P-RH-02 Procedimiento de Reclutamiento
+PO-RH-01 Pol�tica de Reclutamiento, Selecci�n y Contrataci�n de Personal
+Expediente de personal
+Tercerizaci�n de proceso de reclutamiento (contrato de servicios)
+Descripci�n: 6.2 T�rminos y condiciones de contrataci�n
+Control: Los acuerdos contractuales de empleo deben indicar las responsabilidades del personal y de la organizaci�n en materia de seguridad de la informaci�n.
+Aplicabilidad (S�/NO): S�
+Documento o justificaci�n Estado: Contrato Individual de trabajo Contrato de obra por encargo y confidencialidad Convenio de confidencialidad P-RH-02 Procedimiento de Reclutamiento PO-RH-01 Pol�tica de Reclutamiento, Selecci�n y Contrataci�n de Personal P-RH-03 Procedimiento de Capacitaci�n Nuevo Ingreso F-RH-06 Inducci�n Personal de Nuevo Ingreso M-SGSI-01 Gu�a de usuario del SGSI PO-RH-06 C�digo de �tica PO-RH-05 Reglamento Interno de trabajo F-SGC-03 Carta Compromiso para personal de nuevo ingreso
+Descripci�n: 6.3 Concienciaci�n, educaci�n y formaci�n en seguridad de la informaci�n
+Control: El personal de la organizaci�n y las partes interesadas pertinentes deben recibir una adecuada concienciaci�n, educaci�n y formaci�n sobre seguridad de la informaci�n y actualizaciones peri�dicas de la pol�tica de seguridad de la informaci�n de la organizaci�n y de las pol�ticas y los procedimientos espec�ficos, seg�n corresponda a su puesto de trabajo.
+Aplicabilidad (S�/NO): S�
+Documento o justificaci�n Estado: M-SGSI-01 Gu�a de usuario del SGSI P-RH-01 Procedimiento de Capacitaci�n de Personal F-RH-09 Plan de Capacitaci�n Anual DP-RH-NN con conocimientos en ISO 27001 F-RH-06 Inducci�n Personal de Nuevo Ingreso P-RH-03 Procedimiento de Capacitaci�n Nuevo Ingreso F-RH-04 Toma de conciencia Env�o de informaci�n en Bolet�n Zell mensual
+Descripci�n: 6.4 Proceso disciplinario
+Control: Debe existir un proceso disciplinario formal que haya sido comunicado a los empleados y partes interesadas pertinentes, que recoja las acciones a tomar ante aquellos que hayan provocado alguna brecha de seguridad.
+Aplicabilidad (S�/NO): S�
+Documento o justificaci�n Estado: M-SGSI-01 Gu�a de usuario del SGSI enviada 27/12/2023 PO-RH-06 C�digo de �tica � Se env�a 04/12/2023 en bolet�n y se cuenta con carta compromiso de c�digo de �tica firmada PO-RH-05 Reglamento Interno de Trabajo firmado P-RH-05 Procedimiento de Quejas y Denuncias enviado 02/10/2023 Buz�n de �tica en p�gina web de Zell Bolet�n Zell se comparten canales de comunicaci�n �ticos
+Descripci�n: 6.5 Responsabilidad ante la finalizaci�n o cambio
+Control: Las responsabilidades y obligaciones en seguridad de la informaci�n que siguen vigentes despu�s del cese o cambio de empleo se deben definir, hacer cumplir y comunicar al personal pertinente y a otras partes interesadas.
+Aplicabilidad (S�/NO): S�
+Documento o justificaci�n Estado: F-SGSI-06 Registro de accesos, autorizaciones y bajas M-SGSI-01 Gu�a de usuario del SGSI apartado 3.7 P-RH-06 Procedimiento de Baja de Personal F-RH-14 Registro de Baja de Personal P-SGSI-01 Organizaci�n de seguridad de la informaci�n Acta de entrega de puesto de trabajo y anexos de usuarios, claves, proyectos, actividades pendientes Encuesta de Salida Informe de Salida
+Descripci�n: 6.6 Acuerdos de confidencialidad o no divulgaci�n
+Control: Los acuerdos de confidencialidad o no divulgaci�n que reflejen las necesidades de protecci�n de la informaci�n de la organizaci�n deben ser identificados, documentados, revisados regularmente y firmados por el personal y otras partes interesadas pertinentes.
+Aplicabilidad (S�/NO): S�
+Documento o justificaci�n Estado: M-SGSI-01 Gu�a de usuario del SGSI F-SGC-29 Carta Compromiso F-SGC-03 Carta Compromiso para personal de nuevo ingreso DP-RH-NN Descriptivos de Puesto M-SGSI-01 Gu�a de usuario del SGSI Contratos de servicio Contrato de obra por encargo y confidencialidad cl�usula 3 Contrato Individual cl�usulas 12 y 14 Convenio de confidencialidad Cotejo de documentaci�n de expediente de personal
+Descripci�n: 6.7 Teletrabajo
+Control: Se implementar�n medidas de seguridad cuando el personal trabaje de forma remota para proteger la informaci�n a la que se acceda, procese o almacene fuera de las instalaciones de la organizaci�n.
+Aplicabilidad (S�/NO): NO
+Documento o justificaci�n Estado: No se realiza teletrabajo en la empresa
+Descripci�n: 6.8 Notificaci�n de los eventos de seguridad de la informaci�n
+Control: La organizaci�n debe proporcionar un mecanismo para que el personal notifique a tiempo eventos de seguridad de la informaci�n observados o sospechosos a trav�s de los canales apropiados.
+Aplicabilidad (S�/NO): S�
+Documento o justificaci�n Estado: P-SGSI-10 Gesti�n de incidentes F-SGSI-12 Registro de incidencias de seguridad
+
+
+Nombre de tabla: A.7 INFRAESTRUCTURA
+Descripci�n: 7.1 Per�metro de seguridad f�sica
+Control: Se deben definir y utilizar per�metros de seguridad para proteger �reas que contengan informaci�n y otros activos asociados.
+Aplicabilidad (S�/NO): S�
+Documento o justificaci�n Estado: P-SGSI-07 Seguridad f�sica
+Entradas por medio de lectores biom�tricos y tarjetas, tanto al edificio como a oficina
+Descripci�n: 7.2 Controles f�sicos de entrada
+Control: Las �reas seguras deben estar protegidas por controles de entrada y puntos de acceso adecuados.
+Aplicabilidad (S�/NO): S�
+Documento o justificaci�n Estado: P-SGSI-07 Seguridad f�sica Entradas por medio de lectores biom�tricos y tarjetas, tanto al edificio como a oficina
+Descripci�n: 7.3 Seguridad de oficinas, despachos y recursos
+Control: Para las oficinas, despachos y recursos, se debe dise�ar y aplicar la seguridad f�sica.
+Aplicabilidad (S�/NO): S�
+Documento o justificaci�n Estado: P-SGSI-07 Seguridad f�sica Para las oficinas, despachos y recursos, se debe dise�ar y aplicar la seguridad f�sica
+Descripci�n: 7.4 Monitorizaci�n de la seguridad f�sica
+Control: Las instalaciones deben ser monitorizadas continuamente para detectar cualquier acceso f�sico no autorizado.
+Aplicabilidad (S�/NO): S�
+Documento o justificaci�n Estado: P-SGSI-03 Control de accesos F-SGSI-06 Registro de accesos, autorizaciones y bajas M-SGSI-01 Gu�a de Usuario del SGSI P-RH-06 Procedimiento de Baja de Personal F-RH-14 Registro de Baja de Personal
+Descripci�n: 7.5 Protecci�n contra las amenazas f�sicas y ambientales
+Control: Se debe dise�ar e implementar una protecci�n a las infraestructuras contra las amenazas f�sicas y ambientales, como los desastres naturales y otras amenazas f�sicas intencionadas o no.
+Aplicabilidad (S�/NO): S�
+Documento o justificaci�n Estado: P-SGSI-07 Seguridad f�sica F-SGC-24 Programa de Mantenimiento Entradas por medio de lectores biom�tricos y tarjetas, tanto al edificio como a oficina, as� como llaves en oficinas privadas Se cuenta con un extintor, alarma contra incendios, sismos, rutas de evacuaci�n
+Descripci�n: 7.6 El trabajo en �reas seguras
+Control: Se debe dise�ar e implementar procedimientos para trabajar en las �reas seguras.
+Aplicabilidad (S�/NO): S�
+Documento o justificaci�n Estado: P-SGSI-07 Seguridad f�sica Entradas por medio de lectores biom�tricos y tarjetas, tanto al edificio como a oficina, as� como llaves en oficinas privadas
+Descripci�n: 7.7 Puesto de trabajo despejado y pantalla limpia
+Control: Deben definirse y hacerse cumplir reglas de puesto de trabajo despejado de papeles y de medios de almacenamiento removibles, as� como reglas de pantalla limpia para los recursos de tratamiento de la informaci�n.
+Aplicabilidad (S�/NO): S�
+Documento o justificaci�n Estado: P-SGSI-06 Seguridad de los equipos � Pol�tica de puesto de trabajo y pantalla limpia M-SGSI-01 Gu�a de usuario del SGSI F-SGSI-17 Monitoreos internos
+Descripci�n: 7.8 Emplazamiento y protecci�n de equipos
+Control: Los equipos deben situarse de forma protegida y segura.
+Aplicabilidad (S�/NO): S�
+Documento o justificaci�n Estado: P-SGSI-06 Seguridad de los equipos M-SGSI-01 Gu�a de usuario del SGSI F-SGSI-05 Inventario y Distribuci�n de Soportes
+Descripci�n: 7.9 Seguridad de los equipos fuera de las instalaciones
+Control: Los activos fuera de las instalaciones deben estar protegidos.
+Aplicabilidad (S�/NO): S�
+Documento o justificaci�n Estado: P-SGSI-06 Seguridad de los equipos M-SGSI-01 Gu�a de usuario del SGSI F-SGSI-05 Inventario y Distribuci�n de Soportes
+Descripci�n: 7.10 Soportes de almacenamiento
+Control: Los soportes de almacenamiento deben gestionarse durante todo su ciclo de vida de adquisici�n, uso, transporte y eliminaci�n de acuerdo con el esquema de clasificaci�n y los requisitos de manipulaci�n de la organizaci�n.
+Aplicabilidad (S�/NO): S�
+Documento o justificaci�n Estado: P-SGSI-02 Gesti�n de Soportes F-SGSI-05 Inventario y distribuci�n de soportes
+Descripci�n: 7.11 Instalaciones de suministro
+Control: Las instalaciones de procesamiento de informaci�n deben estar protegidas contra fallos de alimentaci�n y otras alteraciones causadas por fallos en las instalaciones de suministro.
+Aplicabilidad (S�/NO): S�
+Documento o justificaci�n Estado: P-SGSI-06 Seguridad de los equipos F-SGC-24 Programa de mantenimiento M-SGSI-01 Gu�a de usuario del SGSI Se cuenta con UPS y l�mparas de emergencia
+Descripci�n: 7.12 Seguridad del cableado
+Control: El cableado el�ctrico y de telecomunicaciones que transmite datos o que sirve de soporte a los servicios de informaci�n debe estar protegido frente a interceptaciones, interferencias o da�os.
+Aplicabilidad (S�/NO): S�
+Documento o justificaci�n Estado: P-SGSI-06 Seguridad de los equipos F-SGC-24 Programa de mantenimiento M-SGSI-01 Gu�a de usuario del SGSI Cableado conectado a piso y por debajo de escritorios
+Descripci�n: 7.13 Mantenimiento de los equipos
+Control: Los equipos deben recibir un mantenimiento correcto que asegure la disponibilidad, integridad y confidencialidad de la informaci�n.
+Aplicabilidad (S�/NO): S�
+Documento o justificaci�n Estado: P-SGSI-06 Seguridad de los equipos F-SGC-24 Programa de mantenimiento M-SGSI-01 Gu�a de usuario del SGSI
+Descripci�n: 7.14 Eliminaci�n o reutilizaci�n segura de equipos
+Control: Todos los soportes de almacenamiento deben ser comprobados para confirmar que todo dato sensible y software bajo licencia han sido eliminados o sobrescritos de manera segura antes de deshacerse de ellos o reutilizarlos.
+Aplicabilidad (S�/NO): S�
+Documento o justificaci�n Estado: P-SGSI-06 Seguridad de los equipos P-SGSI-02 Procedimiento de gesti�n de soportes F-SGSI-05 Inventario y distribuci�n de soportes F-SGSI-06 Registro de accesos, autorizaciones y bajas M-SGSI-01 Gu�a de usuario del SGSI
+
+Nombre de tabla: A.8 TECNOLOG�A
+Descripci�n: 8.1 Dispositivos finales de usuario
+Control: La informaci�n almacenada, procesada o accesible a trav�s de dispositivos finales de usuario debe protegerse.
+Aplicabilidad (S�/NO): S�
+Documento o justificaci�n Estado: P-SGSI-06 Seguridad de los equipos
+P-SGSI-02 Procedimiento de gesti�n de soportes
+F-SGSI-05 inventario y distribuci�n de soportes
+F-SGSI-06 Registro de accesos, autorizaciones y bajas
+M-SGSI-01 Gu�a de usuario del SGSI
+Descripci�n: 8.2 Gesti�n de privilegios de acceso
+Control: La asignaci�n y el uso de derechos de acceso con privilegios deben restringirse y controlarse.
+Aplicabilidad (S�/NO): S�
+Documento o justificaci�n Estado: P-SGSI-03 Control de accesos F-SGSI-06 Registro de accesos, autorizaciones y bajas
+Descripci�n: 8.3 Restricci�n del acceso a la informaci�n
+Control: Se debe restringir el acceso a la informaci�n y otros activos relacionados, de acuerdo con las pol�ticas espec�ficas de control de acceso definidas.
+Aplicabilidad (S�/NO): S�
+Documento o justificaci�n Estado: P-SGSI-03 Control de accesos F-SGSI-06 Registro de accesos, autorizaciones y bajas
+Descripci�n: 8.4 Acceso al c�digo fuente
+Control: Se debe gestionar adecuadamente el acceso de lectura y escritura al c�digo fuente, a las herramientas de desarrollo y a las bibliotecas de software.
+Aplicabilidad (S�/NO): NO
+Documento o justificaci�n Estado: No se tiene acceso al c�digo fuente de los programas, �nicamente se manejan licencias de uso de acuerdo con cada proveedor
+Descripci�n: 8.5 Autenticaci�n segura
+Control: Las tecnolog�as y procedimientos de autenticaci�n segura deben implementarse en funci�n de las restricciones de acceso a la informaci�n y la pol�tica espec�fica sobre control de acceso.
+Aplicabilidad (S�/NO): S�
+Documento o justificaci�n Estado: P-SGSI-03 Control de accesos F-SGSI-06 Registro de accesos, autorizaciones y bajas
+Descripci�n: 8.6 Gesti�n de capacidades
+Control: Se debe supervisar y ajustar la utilizaci�n de los recursos en consonancia con los requisitos de capacidad actuales y esperados.
+Aplicabilidad (S�/NO): S�
+Documento o justificaci�n Estado: P-SGSI-05 Seguridad de las Operaciones F-SGC-24 Programa de mantenimiento
+Descripci�n: 8.7 Controles contra el c�digo malicioso
+Control: Se debe implementar una protecci�n contra el c�digo malicioso, respaldada por una concienciaci�n adecuada al usuario.
+Aplicabilidad (S�/NO): S�
+Documento o justificaci�n Estado: P-SGSI-05 Seguridad de las Operaciones F-SGSI-17 Programa de Mantenimiento F-RH-04 Toma de Conciencia Windows defender y Fortigate 50 E
+Descripci�n: 8.8 Gesti�n de vulnerabilidades t�cnicas
+Control: Se debe obtener informaci�n acerca de las vulnerabilidades t�cnicas de los sistemas de informaci�n utilizados, evaluar la exposici�n de la organizaci�n a dichas vulnerabilidades y adoptar las medidas adecuadas.
+Aplicabilidad (S�/NO): S�
+Documento o justificaci�n Estado: P-SGSI-05 Seguridad de las Operaciones P-SGCSI-04 Procedimiento de Gesti�n del Riesgo y oportunidades F-SGSI-04 Amef F-SGSI-01 Matriz de Riesgos por Activos P-SGSI-08 Inteligencia de Amenazas M-SGSI-01 Gu�a de Usuario del SGSI
+Descripci�n: 8.9 Gesti�n de la configuraci�n
+Control: Se debe establecer, documentar, implementar, monitorizar y revisar las configuraciones de hardware, software, servicios y redes, incluyendo sus configuraciones de seguridad.
+Aplicabilidad (S�/NO): S�
+Documento o justificaci�n Estado: P-SGSI-03 Control de accesos F-SGSI-06 Registro de accesos, autorizaciones y bajas F-SGSI-01 Matriz de Riesgos por Activos
+Descripci�n: 8.10 Eliminaci�n de la informaci�n
+Control: La informaci�n almacenada en los sistemas de informaci�n, en los dispositivos y cualquier otro medio de almacenamiento debe eliminarse cuando ya no sea necesaria.
+Aplicabilidad (S�/NO): S�
+Documento o justificaci�n Estado: P-SGSI-03 Control de accesos F-SGSI-06 Registro de accesos, autorizaciones y bajas M-SGSI-01 Gu�a de Usuario del SGSI P-RH-06 Procedimiento de Baja de Personal F-RH-14 Registro de Baja de Personal P-SGSI-02 Gesti�n de Soportes F-SGSI-05 Inventario y distribuci�n de soportes con baja de equipos
+Descripci�n: 8.11 Enmascaramiento de datos
+Control: El enmascaramiento de datos debe utilizarse de acuerdo con la pol�tica espec�fica del tema de la organizaci�n sobre el control de acceso, con otras pol�ticas tem�ticas relacionadas, as� como con los requisitos de negocio, teniendo en cuenta los requisitos legales aplicables.
+Aplicabilidad (S�/NO): S�
+Documento o justificaci�n Estado: P-SGSI-04 Controles Criptogr�ficos F-SGSI-07 Registro de Controles Criptogr�ficos
+Descripci�n: 8.12 Prevenci�n de fugas de datos
+Control: Se deben aplicar medidas de prevenci�n de fugas de datos a sistemas, redes y cualquier otro dispositivo que procese, almacene o transmita informaci�n confidencial.
+Aplicabilidad (S�/NO): S�
+Documento o justificaci�n Estado: P-SGSI-04 Controles Criptogr�ficos F-SGSI-07 Registro de Controles Criptogr�ficos P-SGCSI-01 Procedimiento de Elaboraci�n de Documentos P-SGCSI-02 Procedimiento de Control de Registros P-SGCSI-03 Procedimiento de Control de Documentos F-RH-04 Toma de conciencia Contrato Individual de Trabajo Contrato de Obra por Encargo y Confidencialidad Convenio de Confidencialidad
+Descripci�n: 8.13 Copias de seguridad de la informaci�n
+Control: Las copias de seguridad de la informaci�n, del software y de los sistemas deben mantenerse y probarse peri�dicamente de acuerdo con la pol�tica de copias de seguridad espec�fica acordada.
+Aplicabilidad (S�/NO): S�
+Documento o justificaci�n Estado: P-SGSI-07 Seguridad de las Operaciones � Pol�tica de Copias de Seguridad F-SGSI-09 Registro de las copias de seguridad
+Descripci�n: 8.14 Redundancia recursos de tratamiento de la informaci�n
+Control: Los recursos de tratamiento de la informaci�n deben ser implementados con la redundancia suficiente para satisfacer los requisitos de disponibilidad.
+Aplicabilidad (S�/NO): S�
+Documento o justificaci�n Estado: F-SGC-24 Plan de Mantenimiento P-INF-01 Procedimiento de Selecci�n y Evaluaci�n de Proveedores F-INF-01 Selecci�n y Evaluaci�n de Proveedores P-SGSI-05 Seguridad de las Operaciones � Pol�tica de Copias de Seguridad F-SGSI-09 Registro de las copias de seguridad Se cuenta con respaldos de documentaci�n del SGCSI tanto en carpetas de la nube (2 ubicaciones) como en los respaldos realizados semestralmente
+Descripci�n: 8.15 Registros de eventos
+Control: Se deben generar, proteger, almacenar y analizar los registros de las actividades, excepciones, fallos y otros eventos relevantes.
+Aplicabilidad (S�/NO): S�
+Documento o justificaci�n Estado: P-SGSI-05 Seguridad de las Operaciones F-SGSI-12 Registro de Incidentes de Seguridad F-SGSI-17 Monitoreos Internos
+Descripci�n: 8.16 Seguimiento de actividades
+Control: Las redes, los sistemas y las aplicaciones deben monitorizarse en busca de comportamientos an�malos y se deben tomar medidas adecuadas para evaluar posibles incidentes de seguridad de la informaci�n.
+Aplicabilidad (S�/NO): S�
+Documento o justificaci�n Estado: P-SGCSI-04 Procedimiento de Gesti�n del Riesgo y Oportunidades F-SGSI-01 Matriz de Riesgos por Activas F-SGSI-12 Registro de Incidentes de Seguridad F-SGSI-15 Listado de Indicadores F-SGSI-17 Monitoreos Internos
+Descripci�n: 8.17 Sincronizaci�n del reloj
+Control: Los relojes de los sistemas de procesamiento de informaci�n utilizados por la organizaci�n deben sincronizarse con fuentes de tiempo aprobadas.
+Aplicabilidad (S�/NO): S�
+Documento o justificaci�n Estado: P-SGSI-05 Seguridad de las Operaciones
+Descripci�n: 8.18 Uso de los programas de utilidad con privilegios
+Control: Se debe restringir y controlar rigurosamente el uso de programas de utilidad que puedan ser capaces de invalidar los controles del sistema y de la aplicaci�n.
+Aplicabilidad (S�/NO): S�
+Documento o justificaci�n Estado: P-SGSI-03 Control de accesos F-SGSI-06 Registro de accesos, autorizaciones y bajas
+Descripci�n: 8.19 Instalaci�n del software en sistemas en producci�n
+Control: Deben implementarse procedimientos y medidas para gestionar de forma segura la instalaci�n de software en los sistemas en producci�n.
+Aplicabilidad (S�/NO): NO
+Documento o justificaci�n Estado: El proceso de atenci�n a clientes no realiza instalaci�n de software en los sistemas de producci�n
+Descripci�n: 8.20 Seguridad de redes
+Control: Las redes y los dispositivos de red deben estar protegidos, gestionados y controlados para proteger la informaci�n en los sistemas y aplicaciones.
+Aplicabilidad (S�/NO): S�
+Documento o justificaci�n Estado: P-SGSI-09 Seguridad de las comunicaciones
+Descripci�n: 8.21 Seguridad de los servicios de red
+Control: Se deben identificar, implementar y monitorizar los mecanismos de seguridad, los niveles de servicio y los requisitos de servicio de todos los servicios de red.
+Aplicabilidad (S�/NO): S�
+Documento o justificaci�n Estado: P-INF-01 Procedimiento de Selecci�n y aprobaci�n de proveedores F-INF-01 Selecci�n y evaluaci�n de proveedores
+Descripci�n: 8.22 Segregaci�n en redes
+Control: Los grupos de servicios de informaci�n, de usuarios y de sistemas de informaci�n deben ser segregados en las redes de la organizaci�n.
+Aplicabilidad (S�/NO): S�
+Documento o justificaci�n Estado: P-SGSI-09 Seguridad de las comunicaciones
+Descripci�n: 8.23 Filtrado de webs
+Control: El acceso a sitios web externos debe gestionarse para reducir la exposici�n a contenido malicioso.
+Aplicabilidad (S�/NO): S�
+Documento o justificaci�n Estado: P-INF-01 Procedimiento de Selecci�n y aprobaci�n de proveedores F-INF-01 Selecci�n y evaluaci�n de proveedores P-SGSI-09 Seguridad de las comunicaciones
+Descripci�n: 8.24 Uso de la criptograf�a
+Control: Deben definirse e implementarse reglas para el uso eficaz de la criptograf�a, incluida para la gesti�n de claves criptogr�ficas.
+Aplicabilidad (S�/NO): S�
+Documento o justificaci�n Estado: P-SGSI-04 Controles criptogr�ficos F-SGSI-07 Registro de controles criptogr�ficos M-SGSI-01 Gu�a de usuario del SGSI
+Descripci�n: 8.25 Seguridad en el ciclo de vida del desarrollo
+Control: Se deben establecer y aplicar reglas para el desarrollo seguro de aplicaciones y sistemas.
+Aplicabilidad (S�/NO): NO
+Documento o justificaci�n Estado: No se realiza desarrollo de software en el proceso de atenci�n a clientes
+Descripci�n: 8.26 Requisitos de seguridad de las aplicaciones
+Control: Los requisitos de seguridad de la informaci�n deben identificarse, especificarse y aprobarse al desarrollar o adquirir aplicaciones.
+Aplicabilidad (S�/NO): S�
+Documento o justificaci�n Estado: M-SGSI-01 Gu�a de Usuario del SGSI PO-RH-05 Reglamento Interno de Trabajo F-SGSI-14 Listado de Licencias de Software
+Descripci�n: 8.27 Arquitectura segura de sistemas y principios de ingenier�a
+Control: Los principios de ingenier�a de sistemas seguros se deben establecer, documentar, mantener y aplicar a todas las actividades de desarrollo de sistemas de informaci�n.
+Aplicabilidad (S�/NO): NO
+Documento o justificaci�n Estado: No se realiza desarrollo de software en el proceso de atenci�n a clientes
+Descripci�n: 8.28 Codificaci�n segura
+Control: Principios de codificaci�n segura deben aplicarse al desarrollo de software.
+Aplicabilidad (S�/NO): NO
+Documento o justificaci�n Estado: No se realiza desarrollo de software en el proceso de atenci�n a clientes
+Descripci�n: 8.29 Pruebas de seguridad en desarrollo y aceptaci�n
+Control: Deben definirse e implementarse procesos de pruebas de seguridad en el ciclo de vida del desarrollo.
+Aplicabilidad (S�/NO): NO
+Documento o justificaci�n Estado: No se realiza desarrollo de software en el proceso de atenci�n a clientes
+Descripci�n: 8.30 Externalizaci�n del desarrollo
+Control: La organizaci�n debe controlar, monitorizar y revisar las actividades relativas al desarrollo externalizado de sistemas.
+Aplicabilidad (S�/NO): S�
+Documento o justificaci�n Estado: P-INF-01 Procedimiento de Selecci�n y aprobaci�n de proveedores F-INF-01 Selecci�n y evaluaci�n de proveedores
+Descripci�n: 8.31 Separaci�n de los entornos de desarrollo, prueba y producci�n
+Control: Deben separarse y protegerse los entornos de desarrollo, prueba y producci�n.
+Aplicabilidad (S�/NO): NO
+Documento o justificaci�n Estado: No se realiza desarrollo de software en el proceso de atenci�n a clientes
+Descripci�n: 8.32 Gesti�n de cambios
+Control: Los cambios en las instalaciones de tratamiento de informaci�n y los sistemas de informaci�n deben estar sujetos a procedimientos de gesti�n de cambios.
+Aplicabilidad (S�/NO): S�
+Documento o justificaci�n Estado: P-SGCSI-07 Gesti�n de Cambios Apartado de propuestas de cambios en el Sistema Zell Tickets
+Descripci�n: 8.33 Datos de prueba
+Control: Los datos de prueba se deben seleccionar con cuidado y deben ser protegidos y controlados.
+Aplicabilidad (S�/NO): NO
+Documento o justificaci�n Estado: No se realiza desarrollo de software y por lo tanto tampoco pruebas, en el proceso de atenci�n a clientes
+Descripci�n: 8.34 Protecci�n de los sistemas de informaci�n durante las pruebas de auditor�a
+Control: Las pruebas de auditor�a y otras actividades de aseguramiento en la evaluaci�n de los sistemas en producci�n deben ser cuidadosamente planificadas y acordadas entre el evaluador y los gestores adecuados.
+Aplicabilidad (S�/NO): NO
+Documento o justificaci�n Estado: No se realiza desarrollo de software y por lo tanto tampoco auditor�as, en el proceso de atenci�n a clientes
+
+Revisi�n: 00
+Cambio: Documento de nueva creaci�n
+Fecha: 07/06/2021
+
+Revisi�n: 01
+Cambio: Se agrega el P-OPR-01 Procedimiento de Solicitud de Atenci�n como parte del alcance
+Fecha: 14/03/2023
+
+Revisi�n: 02
+Cambio: Se ajustan controles de acuerdo con actualizaci�n norma ISO 27001:2022
+Fecha: 25/11/2024
+
+

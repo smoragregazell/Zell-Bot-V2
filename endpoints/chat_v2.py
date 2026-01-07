@@ -85,14 +85,12 @@ def save_last_response_id(conversation_id: str, response_id: str) -> None:
         "last_response_id": response_id,
         "updated_at": time.time(),
     }
-    tr(f"Saved last_response_id={response_id} for conv_id={conversation_id}")
 
 
 def clear_conversation_context(conversation_id: str) -> None:
     """Limpia el contexto de una conversación (para empezar de nuevo)."""
     _conversation_response_ids.pop(conversation_id, None)
     _web_search_counts.pop(conversation_id, None)
-    tr(f"Cleared context for conv_id={conversation_id}")
 
 
 def get_web_search_count(conversation_id: str) -> int:
@@ -105,7 +103,6 @@ def increment_web_search_count(conversation_id: str) -> int:
     current = _web_search_counts.get(conversation_id, 0)
     new_count = current + 1
     _web_search_counts[conversation_id] = new_count
-    tr(f"Incremented web_search count for conv_id={conversation_id}: {new_count}")
     return new_count
 
 
@@ -127,9 +124,9 @@ client = get_openai_client(tool=None)
 # Load ticket FAISS once
 try:
     init_semantic_tool()
-    tr("FAISS initialized OK")
+    tr("FAISS inicializado correctamente")
 except Exception as e:
-    tr(f"FAISS init failed (will still run keyword search): {e}")
+    tr(f"Error al inicializar FAISS (continuará con búsqueda por palabras clave): {e}")
 
 
 class ChatV2Request(BaseModel):
@@ -287,7 +284,9 @@ def tool_search_knowledge(args: Dict[str, Any], conversation_id: str) -> Dict[st
     if policy == "auto":
         policy = "hybrid" if len(query.split()) <= 8 else "keyword"
 
-    tr(f"search_knowledge policy={policy} scope={scope} top_k={top_k} universe={universe} query='{query[:120]}'")
+    tr(f"Buscando en documentación interna Zell...")
+    tr(f"Explorando scope={scope} ejecutando estrategia={policy}")
+    tr(f"Obteniendo top {top_k} resultados para query: '{query[:120]}'")
 
     hits: List[Dict[str, Any]] = []
     notes: List[str] = []
@@ -298,13 +297,17 @@ def tool_search_knowledge(args: Dict[str, Any], conversation_id: str) -> Dict[st
         if policy in ("keyword", "hybrid"):
             words = [w.strip(".,:;!?()[]{}\"'").lower() for w in query.split()]
             words = [w for w in words if len(w) >= 4][:6] or [query]
-            tr(f"[TICKETS] QUERY (keyword): '{query}' -> keywords={words}")
+            tr(f"Buscando en tickets con palabras clave: {words}")
             try:
                 like_results = search_tickets_by_keywords(words, max_results=top_k)
             except TypeError:
                 like_results = search_tickets_by_keywords(words)
 
-            tr(f"[TICKETS] LIKE keywords={words} hits={len(like_results) if like_results else 0}")
+            count = len(like_results) if like_results else 0
+            if count > 0:
+                tr(f"Encontrados {count} tickets con búsqueda por palabras clave")
+            else:
+                tr(f"No se encontraron tickets con palabras clave")
 
             for r in like_results or []:
                 tid = r.get("IdTicket") or r.get("ticket_id") or r.get("id")
@@ -323,12 +326,16 @@ def tool_search_knowledge(args: Dict[str, Any], conversation_id: str) -> Dict[st
 
         # Semantic search (ticket FAISS)
         if policy in ("semantic", "hybrid"):
-            tr(f"[TICKETS] QUERY (semantic): '{query}'")
+            tr(f"Buscando en tickets con búsqueda semántica...")
             try:
                 vec = generate_openai_embedding(query, conversation_id, interaction_id=None)
                 if vec is not None:
                     faiss_results, _dbg = perform_faiss_search(vec, k=top_k)
-                    tr(f"[TICKETS] FAISS hits={len(faiss_results) if faiss_results else 0}")
+                    count = len(faiss_results) if faiss_results else 0
+                    if count > 0:
+                        tr(f"Encontrados {count} tickets con búsqueda semántica")
+                    else:
+                        tr(f"No se encontraron tickets con búsqueda semántica")
 
                     for r in faiss_results or []:
                         tid = r.get("ticket_id") or r.get("IdTicket") or r.get("id")
@@ -345,7 +352,7 @@ def tool_search_knowledge(args: Dict[str, Any], conversation_id: str) -> Dict[st
                             }
                         )
             except Exception as e:
-                tr(f"FAISS search failed: {e}")
+                tr(f"Error en búsqueda semántica FAISS: {e}")
 
     # ---- QUOTES ---- (stub)
     if scope in ("quotes", "all"):
@@ -353,12 +360,16 @@ def tool_search_knowledge(args: Dict[str, Any], conversation_id: str) -> Dict[st
 
     # ---- DOCS ----
     if scope in ("docs", "all"):
-        tr(f"[DOCS] QUERY: '{query}' universe={universe} top_k={top_k}")
+        tr(f"Buscando en: {universe}")
         try:
             doc_res = search_docs(query=query, universe=universe, top_k=top_k)
             if doc_res.get("ok"):
                 dhits = doc_res.get("hits", []) or []
-                tr(f"[DOCS] hits={len(dhits)} universe={universe}")
+                count = len(dhits)
+                if count > 0:
+                    tr(f"Encontrados {count} documentos en {universe}")
+                else:
+                    tr(f"No se encontraron documentos en {universe}")
 
                 for h in dhits:
                     # Construir snippet según tipo de documento
@@ -410,13 +421,18 @@ def tool_search_knowledge(args: Dict[str, Any], conversation_id: str) -> Dict[st
                     )
             else:
                 err = doc_res.get("error")
-                tr(f"DOCS search failed: {err}")
+                tr(f"Error al buscar documentos: {err}")
                 notes.append(f"docs: error={err}")
         except Exception as e:
-            tr(f"DOCS search exception: {e}")
+            tr(f"Excepción al buscar documentos: {e}")
             notes.append(f"docs: exception={e}")
 
     final_hits = _dedupe_hits(hits, top_k=top_k)
+    total_found = len(final_hits)
+    if total_found > 0:
+        tr(f"Total de resultados encontrados: {total_found}")
+    else:
+        tr(f"Sin resultados en ninguna fuente")
     return {"hits": final_hits, "notes": notes}
 
 
@@ -425,14 +441,20 @@ def tool_get_item(args: Dict[str, Any], conversation_id: str) -> Dict[str, Any]:
     item_id = str(args.get("id"))
     include_comments = bool(args.get("include_comments", True))
 
-    tr(f"get_item type={item_type} id={item_id} include_comments={include_comments}")
+    tr(f"Obteniendo item {item_type} id={item_id}")
 
     # ---- DOC ----
     if item_type == "doc":
         universe = (args.get("universe") or "docs_org").strip()
+        tr(f"Obteniendo info clave del documento")
         try:
             # item_id = chunk_id
-            return get_doc_context(universe=universe, chunk_ids=[item_id], max_chunks=6)
+            result = get_doc_context(universe=universe, chunk_ids=[item_id], max_chunks=6)
+            if result.get("ok") and result.get("blocks"):
+                blocks_count = len(result.get("blocks", []))
+                title = result.get("blocks", [{}])[0].get("title", "N/A") if result.get("blocks") else "N/A"
+                tr(f"Documento obtenido: {title} ({blocks_count} bloques)")
+            return result
         except Exception as e:
             return {
                 "ok": False,
@@ -443,17 +465,25 @@ def tool_get_item(args: Dict[str, Any], conversation_id: str) -> Dict[str, Any]:
 
     # ---- TICKET ----
     if item_type == "ticket":
+        tr(f"Obteniendo datos del ticket #{item_id}")
         try:
             ticket_data = fetch_ticket_data(item_id)
+            title = ticket_data.get("Titulo") or ticket_data.get("title") or "N/A"
+            tr(f"Ticket obtenido: {title}")
         except Exception as e:
+            tr(f"Error al obtener ticket: {e}")
             return {"error": f"fetch_ticket_data falló: {e}"}
 
         out: Dict[str, Any] = {"ticket_data": ticket_data}
 
         if include_comments:
+            tr(f"Obteniendo comentarios del ticket...")
             try:
                 out["ticket_comments"] = get_ticket_comments(item_id, conversation_id)
+                comments_count = len(out.get("ticket_comments", []))
+                tr(f"Comentarios obtenidos: {comments_count}")
             except Exception as e:
+                tr(f"Error al obtener comentarios: {e}")
                 out["ticket_comments_error"] = str(e)
 
         return out
@@ -475,7 +505,7 @@ async def tool_query_tickets(args: Dict[str, Any], conversation_id: str) -> Dict
     if not user_question:
         return {"error": "La pregunta no puede estar vacía."}
     
-    tr(f"query_tickets question='{user_question[:120]}'")
+    tr(f"Generando consulta SQL para: {user_question[:100]}")
     
     try:
         # Obtener interaction_id para logging
@@ -488,7 +518,7 @@ async def tool_query_tickets(args: Dict[str, Any], conversation_id: str) -> Dict
         # 1️⃣ Generar la consulta SQL
         sql_response = await generate_sql_query(user_question, conversation_id, interaction_id)
         if not isinstance(sql_response, dict):
-            tr(f"generate_sql_query returned: {type(sql_response)} = {sql_response}")
+            tr(f"Error: generate_sql_query retornó tipo inesperado: {type(sql_response)}")
             return {
                 "error": "No se pudo generar la consulta SQL.",
                 "details": f"generate_sql_query retornó: {type(sql_response).__name__}"
@@ -497,8 +527,9 @@ async def tool_query_tickets(args: Dict[str, Any], conversation_id: str) -> Dict
         sql_query = sql_response.get("sql_query", "").strip()
         sql_description = sql_response.get("mensaje", "")
         
-        tr(f"📊 SQL Query Generated: {sql_query}")
-        tr(f"📝 SQL Description: {sql_description}")
+        tr(f"Query SQL generado: {sql_query}")
+        if sql_description:
+            tr(f"Descripción: {sql_description}")
         
         if not sql_query or sql_query.lower() == "no viable":
             return {
@@ -513,11 +544,14 @@ async def tool_query_tickets(args: Dict[str, Any], conversation_id: str) -> Dict
             }
         
         # 2️⃣ Ejecutar consulta en Zell
+        tr(f"Ejecutando consulta en base de datos...")
         api_data, status_code, _, _ = fetch_query_results(sql_query)
         if api_data is None:
+            tr(f"Error llamando API de Zell")
             return {"error": "Error llamando API de Zell."}
         
         if isinstance(api_data, list) and not api_data:
+            tr(f"No se encontraron tickets con los criterios especificados")
             return {
                 "ok": True,
                 "response": "No hay resultados para esa consulta.",
@@ -529,7 +563,9 @@ async def tool_query_tickets(args: Dict[str, Any], conversation_id: str) -> Dict
         if isinstance(api_data, list):
             filtered_data = api_data[:25]
             total_count = len(api_data)
-            tr(f"query_tickets: {total_count} total results, filtering to top 25")
+            tr(f"Encontrados {total_count} tickets")
+            if total_count > 25:
+                tr(f"Mostrando top 25 de {total_count} resultados")
         else:
             filtered_data = api_data
             total_count = 1
@@ -548,7 +584,7 @@ async def tool_query_tickets(args: Dict[str, Any], conversation_id: str) -> Dict
         }
         
     except Exception as e:
-        tr(f"query_tickets exception: {e}")
+        tr(f"Error al ejecutar query_tickets: {e}")
         return {"error": f"Error ejecutando consulta: {str(e)}"}
 
 
@@ -575,29 +611,28 @@ async def chat_v2(req: ChatV2Request):
         if not SKIP_AUTH:
             verificar_token(req.zToken)
         else:
-            tr("AUTH skipped (SKIP_AUTH=1)")
+            tr("Autenticación omitida (SKIP_AUTH=1)")
 
-        tr(f"NEW REQUEST conv_id={req.conversation_id} user={req.userName}")
-        tr(f"USER: {req.user_message}")
+        tr(f"Nueva solicitud - conv_id={req.conversation_id} usuario={req.userName}")
+        tr(f"Usuario: {req.user_message}")
 
         # Obtener el último response_id de esta conversación para mantener contexto
         conversation_prev_id = get_last_response_id(req.conversation_id)
         had_previous_context = conversation_prev_id is not None
         if conversation_prev_id:
-            tr(f"Continuing from previous response_id={conversation_prev_id}")
+            tr(f"Continuando conversación previa (response_id: {conversation_prev_id})")
         else:
-            tr("New conversation (no previous response_id)")
+            tr("Nueva conversación (sin contexto previo)")
 
         # prev_id se inicializa con el de la conversación anterior (solo para el primer round)
         prev_id: Optional[str] = conversation_prev_id
         next_input: List[Dict[str, Any]] = [{"role": "user", "content": req.user_message}]
-        
-        # Guardar el mensaje original del usuario para referencia (útil para web_search)
-        original_user_message = req.user_message
 
         # Tool-calling loop
         for round_idx in range(1, 7):
             tr(f"--- ROUND {round_idx} --- prev_id={prev_id}")
+            tr(f"Iniciando round {round_idx}")
+            tr(f"Enviando solicitud a OpenAI...")
 
             t0 = time.time()
             try:
@@ -613,7 +648,7 @@ async def chat_v2(req: ChatV2Request):
                 error_str = str(api_error).lower()
                 if (prev_id and round_idx == 1 and 
                     ("not found" in error_str or "invalid" in error_str or "expired" in error_str)):
-                    tr(f"previous_response_id expired/invalid: {api_error}, retrying without it")
+                    tr(f"response_id expirado/inválido: {api_error}, reintentando sin contexto previo")
                     clear_conversation_context(req.conversation_id)
                     prev_id = None
                     # Reintentar sin previous_response_id
@@ -627,7 +662,8 @@ async def chat_v2(req: ChatV2Request):
                 else:
                     raise  # Re-lanzar si no es un error de previous_response_id
             
-            tr(f"OpenAI response.id={response.id} took={time.time() - t0:.2f}s")
+            tr(f"Respuesta recibida de OpenAI (took {time.time() - t0:.2f}s)")
+            tr(f"OpenAI response.id={response.id}")
             
             # Extraer información de tokens y costos
             token_info = extract_token_usage(response)
@@ -642,7 +678,8 @@ async def chat_v2(req: ChatV2Request):
 
             # Final answer
             if getattr(response, "output_text", None):
-                tr(f"FINAL OUTPUT len={len(response.output_text)}")
+                tr(f"Generando respuesta final para el usuario...")
+                tr(f"Respuesta final generada ({len(response.output_text)} caracteres)")
                 # Guardar el response_id final para mantener contexto en la siguiente interacción
                 save_last_response_id(req.conversation_id, response.id)
                 
@@ -662,10 +699,14 @@ async def chat_v2(req: ChatV2Request):
 
             # Tool calls
             calls = [it for it in response.output if getattr(it, "type", None) == "function_call"]
-            tr(f"tool_calls={len(calls)}")
+            calls_count = len(calls)
+            if calls_count > 0:
+                tr(f"LLM solicitó {calls_count} tool(s)")
+            else:
+                tr("LLM no solicitó tools")
 
             if not calls:
-                tr("No tool calls and no output_text -> stopping")
+                tr("Sin tools solicitados y sin respuesta - deteniendo ejecución")
                 # Guardar el response_id incluso en caso de error
                 save_last_response_id(req.conversation_id, response.id)
                 
@@ -702,29 +743,11 @@ async def chat_v2(req: ChatV2Request):
                 
                 # Validar límite de búsquedas web
                 if is_web_search:
-                    # Intentar extraer el query del contexto
-                    # web_search es un tool integrado, así que el query viene del contexto de la conversación
-                    web_query = "N/A"
-                    try:
-                        # Primero intentar del mensaje original del usuario (más confiable)
-                        if original_user_message:
-                            web_query = original_user_message[:200]
-                        # Si no hay mensaje original, intentar del input actual
-                        elif next_input:
-                            for inp in next_input:
-                                if isinstance(inp, dict):
-                                    content = inp.get("content", "")
-                                    if content and len(content) > 0:
-                                        web_query = str(content)[:200]
-                                        break
-                    except Exception as e:
-                        tr(f"[WEB_SEARCH] Error extracting query: {e}")
-                    
-                    tr(f"[WEB_SEARCH] Tool detected in round {round_idx} | QUERY: '{web_query}'")
+                    #tr(f"Ejecutando web_search")
                     
                     if not can_use_web_search(req.conversation_id):
                         current_count = get_web_search_count(req.conversation_id)
-                        tr(f"[WEB_SEARCH] LIMIT REACHED for conv_id={req.conversation_id} (count={current_count}/{MAX_WEB_SEARCHES_PER_CONV}) - BLOCKED")
+                        tr(f"Límite de búsquedas web alcanzado (count={current_count}/{MAX_WEB_SEARCHES_PER_CONV}) - BLOQUEADO")
                         result = {
                             "error": f"Límite de búsquedas web alcanzado. Se han realizado {current_count} búsquedas web en esta conversación (máximo: {MAX_WEB_SEARCHES_PER_CONV}).",
                             "limit_reached": True,
@@ -745,7 +768,23 @@ async def chat_v2(req: ChatV2Request):
                         new_count = increment_web_search_count(req.conversation_id)
                         web_search_used_this_round = True
                         tools_called_this_round.append("web_search")
-                        tr(f"[WEB_SEARCH] ALLOWED for conv_id={req.conversation_id} (count={new_count}/{MAX_WEB_SEARCHES_PER_CONV}) - OpenAI will process automatically")
+                        
+                        # Intentar extraer la query del contexto si está disponible
+                        web_query = ""
+                        try:
+                            # La query puede estar en los argumentos o en el contexto previo
+                            if hasattr(item, "arguments") and item.arguments:
+                                args_dict = json.loads(item.arguments) if isinstance(item.arguments, str) else item.arguments
+                                web_query = args_dict.get("query", "") or args_dict.get("search_query", "")
+                        except:
+                            pass
+                        
+                        if web_query:
+                            tr(f"Ejecutando web_search para: {web_query[:100]}")
+                        else:
+                            #tr(f"Buscando en web (query procesada por OpenAI)")
+                        
+                        #tr(f"Búsqueda web permitida (count={new_count}/{MAX_WEB_SEARCHES_PER_CONV})")
                 
                 try:
                     args = json.loads(getattr(item, "arguments", "") or "{}")
@@ -753,9 +792,9 @@ async def chat_v2(req: ChatV2Request):
                     args = {"_raw_arguments": getattr(item, "arguments", "")}
 
                 tool_name_display = name or tool_type or "unknown"
-                tr(f"CALL {i}: {tool_name_display} args={args}")
                 
                 if not is_web_search:
+                    tr(f"Ejecutando tool: {tool_name_display}...")
                     tools_called_this_round.append(tool_name_display)
 
                 # web_search es un tool integrado de OpenAI
@@ -764,7 +803,6 @@ async def chat_v2(req: ChatV2Request):
                 if is_web_search:
                     # Ya validamos el límite arriba y incrementamos el contador si está permitido
                     # OpenAI procesará web_search automáticamente y los resultados aparecerán en el siguiente round
-                    tr(f"[WEB_SEARCH] Processing automatically by OpenAI (count={get_web_search_count(req.conversation_id)})")
                     # No agregamos output manual, OpenAI maneja tools integrados automáticamente
                     continue
 
@@ -777,25 +815,36 @@ async def chat_v2(req: ChatV2Request):
                     else:
                         result = fn(args, req.conversation_id)
                 else:
+                    tr(f"Tool {name} no implementada")
                     result = {"error": f"Tool no implementada: {name}"}
                 dt = time.time() - t1
 
-                # Summary
-                summary = ""
+                # Summary mejorado en español
+                summary_parts = []
                 if isinstance(result, dict):
                     if "hits" in result and isinstance(result["hits"], list):
-                        ids = [f'{h.get("type")}:{h.get("id")}' for h in result["hits"][:5]]
-                        summary = f"hits={len(result['hits'])} top={ids}"
+                        count = len(result["hits"])
+                        summary_parts.append(f"Encontrados {count} resultados")
                     elif "ticket_data" in result:
-                        td = result.get("ticket_data") or {}
-                        summary = f"ticket_data_keys={list(td.keys())[:8]} comments={'ticket_comments' in result}"
+                        summary_parts.append("Ticket obtenido exitosamente")
+                        if "ticket_comments" in result:
+                            comments_count = len(result.get("ticket_comments", []))
+                            summary_parts.append(f"({comments_count} comentarios)")
                     elif "blocks" in result:
-                        summary = f"doc_blocks={len(result.get('blocks', []))}"
+                        blocks_count = len(result.get("blocks", []))
+                        summary_parts.append(f"Documento obtenido ({blocks_count} bloques)")
                     elif "query_type" in result and result.get("query_type") == "sql":
-                        summary = f"sql_query_results={result.get('results_count', 0)}/{result.get('total_results', 0)}"
+                        results_count = result.get("results_count", 0)
+                        total_results = result.get("total_results", 0)
+                        summary_parts.append(f"Consulta ejecutada: {results_count} resultados")
+                        if total_results > results_count:
+                            summary_parts.append(f"(de {total_results} total)")
                     elif "error" in result:
-                        summary = f"error={result['error']}"
-                tr(f"CALL {i} DONE in {dt:.2f}s :: {summary}")
+                        error_msg = str(result.get("error", ""))[:50]
+                        summary_parts.append(f"Error: {error_msg}")
+                
+                summary = " | ".join(summary_parts) if summary_parts else "Completado"
+                tr(f"Tool completado en {dt:.2f}s: {summary}")
 
                 tool_outputs.append(
                     {
@@ -822,7 +871,7 @@ async def chat_v2(req: ChatV2Request):
             prev_id = response.id
             next_input = tool_outputs
 
-        tr("Reached max rounds")
+        tr("Límite de rounds alcanzado (máximo 6)")
         # Guardar el último response_id incluso si se alcanzó el límite
         if final_response_id:
             save_last_response_id(req.conversation_id, final_response_id)
@@ -847,7 +896,7 @@ async def chat_v2(req: ChatV2Request):
         # Si el error es por response_id expirado, limpiar y reintentar (opcional)
         error_str = str(e).lower()
         if "not found" in error_str or "invalid" in error_str or "expired" in error_str:
-            tr(f"Possible expired response_id error: {e}, clearing context")
+            tr(f"Posible error de response_id expirado: {e}, limpiando contexto")
             clear_conversation_context(req.conversation_id)
         
         # Log del error

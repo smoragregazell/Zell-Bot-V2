@@ -11,9 +11,21 @@ from Tools.semantic_tool import generate_openai_embedding
 from .utils import fingerprint_text, normalize_vec_1d
 
 
+def _normalize_universe_name(universe: str) -> str:
+    """
+    Normaliza el nombre del universo para evitar duplicar el prefijo 'docs_'.
+    Si el universo ya empieza con 'docs_', lo deja igual.
+    Si no, agrega el prefijo 'docs_'.
+    """
+    if universe.startswith("docs_"):
+        return universe
+    return f"docs_{universe}"
+
+
 def _emb_cache_path(out_dir: str, universe: str) -> str:
     """Retorna la ruta del archivo de cache de embeddings para un universo."""
-    return os.path.join(out_dir, f"docs_{universe}_emb_cache.jsonl")
+    index_name = _normalize_universe_name(universe)
+    return os.path.join(out_dir, f"{index_name}_emb_cache.jsonl")
 
 
 def load_emb_cache(out_dir: str, universe: str) -> Dict[str, Dict[str, Any]]:
