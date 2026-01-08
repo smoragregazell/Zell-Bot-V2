@@ -7,7 +7,7 @@ from typing import Dict, Any, Optional, List
 
 import numpy as np
 
-from Tools.semantic_tool import generate_openai_embedding
+from Tools.search_tickets import generate_openai_embedding
 from .utils import fingerprint_text, normalize_vec_1d
 
 

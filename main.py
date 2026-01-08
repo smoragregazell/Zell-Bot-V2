@@ -10,18 +10,16 @@ from fastapi.middleware.cors import CORSMiddleware
 
 
 from utils.logging_config import setup_logging
-from endpoints.classifier import router as classifier_router
-import Tools.compararticket_tool
 from endpoints.session_token import router as session_router
 from endpoints.logsdownload import router as logs_router
 from endpoints.chat_v2 import router as chat_v2_router
 
 
 
-# 🔥 Force-import all tool modules to register them with the registry
-import Tools.ticket_tool
-import Tools.query_tool
-import Tools.semantic_tool
+# Force-import tool modules used by V2
+# Note: V1 tool registry is no longer needed for V2
+import Tools.query_tool  # Used by v2_internal/tools/implementations.py
+import Tools.search_tickets  # Used by v2_internal/tools/config.py for init_semantic_tool
 
 
 # Load env vars
@@ -69,20 +67,16 @@ async def global_exception_handler(request: Request, exc: Exception):
     )
 
 # Routers
-app.include_router(classifier_router)
 app.include_router(session_router)
 app.include_router(logs_router)
 app.include_router(chat_v2_router)
-
-from Tools.compararticket_tool import router as compare_router
-app.include_router(compare_router)
 
 @app.get("/")
 async def root():
     return {"message": "AI Assistant API is running 💡"}
 
 # Initialize FAISS (semantic search)
-from Tools.semantic_tool import init_semantic_tool
+from Tools.search_tickets import init_semantic_tool
 init_semantic_tool()
 
 if __name__ == "__main__":

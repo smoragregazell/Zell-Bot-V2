@@ -1,36 +1,31 @@
-from typing import Optional, Literal, List
+"""
+Tool response utilities for V1 compatibility.
+This module provides response formatting functions used by legacy V1 tools.
+"""
+from typing import Dict, Any, Optional
 from pydantic import BaseModel
 
+
 class ToolResponse(BaseModel):
-    classification: Literal[
-        "Consulta de Tickets",
-        "Búsqueda de Query",
-        "ISO",
-        "Pregunta Respondida",
-        "Búsqueda Semántica",
-        "Pregunta Continuada",
-        "Comparar ticket",    
-        "No Relacionado",
-        "Clasificación Incierta",
-        "Error"
-    ]
-
+    """
+    Standardized response format for V1 tools.
+    Note: V2 uses dict responses directly, not this model.
+    """
+    classification: str
     response: str
-    error: Optional[str] = None
+    error: Optional[str] = ""
+    results: Optional[list] = []
 
-    # Campos opcionales útiles para herramientas específicas
-    ticket_ids: Optional[List[str]] = None
-    etiquetas: Optional[List[str]] = None
-    results: Optional[List[dict]] = None
-    metadata: Optional[dict] = None
 
-def make_error_response(message: str) -> ToolResponse:
-    return ToolResponse(
-        classification="Error",
-        response=message,
-        error=message,
-        ticket_ids=[],
-        etiquetas=[],
-        results=[]
-    )
+def make_error_response(error_message: str) -> Dict[str, Any]:
+    """
+    Creates a standardized error response.
+    Used by V1 tools for error handling.
+    """
+    return {
+        "classification": "Error",
+        "response": "",
+        "error": error_message,
+        "results": []
+    }
 

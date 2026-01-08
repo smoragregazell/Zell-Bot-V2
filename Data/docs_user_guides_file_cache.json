@@ -1,0 +1,32 @@
+{
+  "knowledgebase\\user_guides\\(1) Zell - Reintentos de domiciliacion.docx": {
+    "sha256": "983d81dfc3b1ccf38d384c745507cef48c6787d0bd4b5180f5623bd4eb3af378",
+    "processed_at": "2026-01-08T17:17:15.963186Z",
+    "path": "knowledgebase\\user_guides\\(1) Zell - Reintentos de domiciliacion.docx"
+  },
+  "knowledgebase\\user_guides\\(2) Zell - Tickets.docx": {
+    "sha256": "2771926aecb5903d4b6798a65c06ce3606eb57226812e9a1e462a47dda59f2db",
+    "processed_at": "2026-01-08T17:43:42.135706Z",
+    "path": "knowledgebase\\user_guides\\(2) Zell - Tickets.docx"
+  },
+  "knowledgebase\\user_guides\\(3) Zell - Configuración de paquete de políticas.docx": {
+    "sha256": "e60617b16ed54a3d3fdaf5e956dd9d76ef2c48fa2e5b406201068cfb286de8e4",
+    "processed_at": "2026-01-08T17:43:42.136786Z",
+    "path": "knowledgebase\\user_guides\\(3) Zell - Configuración de paquete de políticas.docx"
+  },
+  "knowledgebase\\user_guides\\(4) Zell - Configuracion Email, XML y documentos.docx": {
+    "sha256": "3811d2557aa24fab6d8f953fd8f8f9b0ac00de4566c2d7c7513bdd9212a5da71",
+    "processed_at": "2026-01-08T17:43:42.140193Z",
+    "path": "knowledgebase\\user_guides\\(4) Zell - Configuracion Email, XML y documentos.docx"
+  },
+  "knowledgebase\\user_guides\\(5) Zell - Cambiar estatus del crédito por aplicación de pagos.docx": {
+    "sha256": "b2e15ddbfc889877815d43c4403829d2a6bc1f3c479c1218fd7df3606f55ddf0",
+    "processed_at": "2026-01-08T17:43:42.141196Z",
+    "path": "knowledgebase\\user_guides\\(5) Zell - Cambiar estatus del crédito por aplicación de pagos.docx"
+  },
+  "knowledgebase\\user_guides\\(6) Zell - Cargar tabla de amortización personalizada.docx": {
+    "sha256": "ed44a99dca0a764e86be3b894718780f990b306a68cb100fc9600bbed7b75854",
+    "processed_at": "2026-01-08T17:43:42.142235Z",
+    "path": "knowledgebase\\user_guides\\(6) Zell - Cargar tabla de amortización personalizada.docx"
+  }
+}

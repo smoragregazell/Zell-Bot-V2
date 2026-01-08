@@ -23,9 +23,8 @@ def export_codebase():
         "Tools/continuation_tool.py",
         "Tools/iso_tool.py",
         "Tools/query_tool.py",
-        "Tools/semantic_tool.py",
+        "Tools/search_tickets.py",
         "Tools/semantic_followup_tool.py",
-        "Tools/ticket_tool.py",
         # Prompts
         "Prompts/Clasificador/clasificadorprompt_v1.txt",
         "Prompts/Ticket/ticketprompt_v1.txt",

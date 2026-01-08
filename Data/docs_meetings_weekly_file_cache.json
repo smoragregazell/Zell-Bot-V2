@@ -1,32 +1,32 @@
 {
   "knowledgebase\\meetings_weekly\\2025-01-10 Minuta de Reunión Semanal ENERO (CONFIDENCIAL).docx": {
     "sha256": "058d5aec1a2f80604ba54bfe63083eea4482d3633fcf01191597e25bb83cc76d",
-    "processed_at": "2026-01-06T19:48:36.102446Z",
+    "processed_at": "2026-01-08T19:12:44.562109Z",
     "path": "knowledgebase\\meetings_weekly\\2025-01-10 Minuta de Reunión Semanal ENERO (CONFIDENCIAL).docx"
-  },
-  "knowledgebase\\meetings_weekly\\2025-07-04 Minuta de Reunión Semanal JULIO (CONFIDENCIAL).docx": {
-    "sha256": "3dd14b53b939a890b251768c04fbe664c78cbcbe0797d09dad875446d57657c0",
-    "processed_at": "2026-01-06T19:48:36.102446Z",
-    "path": "knowledgebase\\meetings_weekly\\2025-07-04 Minuta de Reunión Semanal JULIO (CONFIDENCIAL).docx"
   },
   "knowledgebase\\meetings_weekly\\2025-01-24 Minuta de Reunión Semanal ENERO (CONFIDENCIAL).docx": {
     "sha256": "2e18e444f6fc679c16474bce0f5b814ef1f68893d6a692446adb84f458f6625b",
-    "processed_at": "2026-01-06T19:58:29.871337Z",
+    "processed_at": "2026-01-08T19:12:44.562109Z",
     "path": "knowledgebase\\meetings_weekly\\2025-01-24 Minuta de Reunión Semanal ENERO (CONFIDENCIAL).docx"
   },
   "knowledgebase\\meetings_weekly\\2025-01-31 Minuta de Reunión Semanal ENERO (CONFIDENCIAL).docx": {
     "sha256": "596f190d2efe51f85e122154dbb92b586e166309f34e4537e31f6b96d250315c",
-    "processed_at": "2026-01-06T19:58:29.871337Z",
+    "processed_at": "2026-01-08T19:12:44.563392Z",
     "path": "knowledgebase\\meetings_weekly\\2025-01-31 Minuta de Reunión Semanal ENERO (CONFIDENCIAL).docx"
   },
   "knowledgebase\\meetings_weekly\\2025-02-07 Minuta de Reunión Semanal FEBRERO (CONFIDENCIAL).docx": {
     "sha256": "ca3d2d07ae2d64ebe9f4237e95ee90e9d24163b35154eb4a2c577ae679c24198",
-    "processed_at": "2026-01-06T19:58:29.871337Z",
+    "processed_at": "2026-01-08T19:12:44.563392Z",
     "path": "knowledgebase\\meetings_weekly\\2025-02-07 Minuta de Reunión Semanal FEBRERO (CONFIDENCIAL).docx"
   },
   "knowledgebase\\meetings_weekly\\2025-02-14 Minuta de Reunión Semanal FEBRERO (CONFIDENCIAL).docx": {
     "sha256": "0aaa622a1ed6aea0d35a2d1a8a4053587f05bf4856b75455bfdcffd055dc037c",
-    "processed_at": "2026-01-06T19:58:29.871337Z",
+    "processed_at": "2026-01-08T19:12:44.563392Z",
     "path": "knowledgebase\\meetings_weekly\\2025-02-14 Minuta de Reunión Semanal FEBRERO (CONFIDENCIAL).docx"
+  },
+  "knowledgebase\\meetings_weekly\\2025-07-04 Minuta de Reunión Semanal JULIO (CONFIDENCIAL).docx": {
+    "sha256": "3dd14b53b939a890b251768c04fbe664c78cbcbe0797d09dad875446d57657c0",
+    "processed_at": "2026-01-08T19:12:44.563392Z",
+    "path": "knowledgebase\\meetings_weekly\\2025-07-04 Minuta de Reunión Semanal JULIO (CONFIDENCIAL).docx"
   }
 }

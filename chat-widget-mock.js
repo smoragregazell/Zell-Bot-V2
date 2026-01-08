@@ -148,7 +148,7 @@
                 flex-direction: column;
                 align-items: center;
                 justify-content: center;
-                padding: 40px 30px;
+                padding: 30px 25px;
                 text-align: center;
                 background: linear-gradient(180deg, #ffffff 0%, #f8f9fa 100%);
             }
@@ -158,16 +158,16 @@
             }
 
             .welcome-icon {
-                width: 80px;
-                height: 80px;
+                width: 65px;
+                height: 65px;
                 border-radius: 50%;
                 background: linear-gradient(135deg, #e5a500 0%, #ffcd3c 100%);
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                font-size: 40px;
-                margin-bottom: 24px;
-                box-shadow: 0 8px 24px rgba(229, 165, 0, 0.3);
+                font-size: 32px;
+                margin-bottom: 18px;
+                box-shadow: 0 6px 18px rgba(229, 165, 0, 0.3);
                 animation: pulse 2s infinite;
             }
 
@@ -181,10 +181,10 @@
             }
 
             .welcome-title {
-                font-size: 28px;
+                font-size: 24px;
                 font-weight: 700;
                 color: #1a1a1a;
-                margin-bottom: 12px;
+                margin-bottom: 8px;
                 background: linear-gradient(135deg, #e5a500 0%, #ffcd3c 100%);
                 -webkit-background-clip: text;
                 -webkit-text-fill-color: transparent;
@@ -192,47 +192,61 @@
             }
 
             .welcome-subtitle {
-                font-size: 16px;
+                font-size: 14px;
                 color: #666;
-                margin-bottom: 32px;
-                line-height: 1.5;
+                margin-bottom: 24px;
+                line-height: 1.4;
             }
 
             .welcome-features {
-                display: flex;
-                flex-direction: column;
-                gap: 16px;
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 10px;
                 width: 100%;
-                max-width: 300px;
+                max-width: 425px;
             }
 
             .feature-item {
                 display: flex;
                 align-items: center;
-                gap: 12px;
-                padding: 12px;
+                gap: 9px;
+                padding: 9px 11px;
                 background: white;
-                border-radius: 12px;
+                border-radius: 9px;
                 box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
                 text-align: left;
+                transition: transform 0.2s, box-shadow 0.2s;
+            }
+
+            .feature-item:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
             }
 
             .feature-icon {
-                width: 32px;
-                height: 32px;
-                border-radius: 8px;
+                width: 28px;
+                height: 28px;
+                border-radius: 7px;
                 background: linear-gradient(135deg, #e5a500 0%, #ffcd3c 100%);
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                font-size: 18px;
+                font-size: 15px;
                 flex-shrink: 0;
             }
 
             .feature-text {
-                font-size: 14px;
+                font-size: 12px;
                 color: #333;
                 font-weight: 500;
+                line-height: 1.3;
+            }
+
+            @media (max-width: 500px) {
+                .welcome-features {
+                    grid-template-columns: 1fr;
+                    max-width: 100%;
+                }
             }
 
             .chat-container {
@@ -540,12 +554,32 @@
                         <div class="feature-text">Consulta información de tickets</div>
                     </div>
                     <div class="feature-item">
-                        <div class="feature-icon">📄</div>
-                        <div class="feature-text">Accede a documentos y políticas ISO</div>
+                        <div class="feature-icon">🔍</div>
+                        <div class="feature-text">Búsquedas semánticas y SQL</div>
                     </div>
                     <div class="feature-item">
-                        <div class="feature-icon">💬</div>
-                        <div class="feature-text">Responde tus preguntas en tiempo real</div>
+                        <div class="feature-icon">📚</div>
+                        <div class="feature-text">Guías de usuario del sistema</div>
+                    </div>
+                    <div class="feature-item">
+                        <div class="feature-icon">📄</div>
+                        <div class="feature-text">Documentos y políticas ISO</div>
+                    </div>
+                    <div class="feature-item">
+                        <div class="feature-icon">💡</div>
+                        <div class="feature-text">Soluciones en tickets similares</div>
+                    </div>
+                    <div class="feature-item">
+                        <div class="feature-icon">📊</div>
+                        <div class="feature-text">Conteos y análisis de tickets</div>
+                    </div>
+                    <div class="feature-item">
+                        <div class="feature-icon">👥</div>
+                        <div class="feature-text">Reuniones semanales y minutas</div>
+                    </div>
+                    <div class="feature-item">
+                        <div class="feature-icon">🌐</div>
+                        <div class="feature-text">Información en tiempo real</div>
                     </div>
                 </div>
             </div>
