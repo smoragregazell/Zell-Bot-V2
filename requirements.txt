@@ -13,3 +13,4 @@ tiktoken
 rapidfuzz
 ussd-session
 asyncpg>=0.29.0
+supabase>=2.3.0

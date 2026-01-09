@@ -95,13 +95,45 @@ async def process_chat_v2_core(req: ChatV2Request) -> Dict[str, Any]:
             tr(f"Respuesta recibida de OpenAI (took {time.time() - t0:.2f}s)")
             tr(f"OpenAI response.id={response.id}")
             
-            # Extraer información de tokens y costos
-            token_info = extract_token_usage(response)
+            # Extraer información de tokens y costos (con manejo robusto de errores)
+            # Inicializar token_info por defecto para asegurar que siempre esté definido
+            token_info = {"input_tokens_total": 0, "input_tokens_real": 0, "cached_tokens": 0, "output_tokens": 0, "total_tokens": 0}
             model_used = os.getenv("V2_MODEL", "gpt-5-mini")
-            if token_info["total_tokens"] > 0:
-                tr(f"Tokens: input={token_info['input_tokens']}, output={token_info['output_tokens']}, total={token_info['total_tokens']}")
-                costs = calculate_cost(model_used, token_info["input_tokens"], token_info["output_tokens"])
-                tr(f"Cost: ${costs['cost_total_usd']:.6f}")
+            
+            try:
+                token_info = extract_token_usage(response)
+                
+                # Asegurar que token_info es un dict válido
+                if not isinstance(token_info, dict):
+                    tr(f"⚠️ token_info no es un dict: {type(token_info)}, usando valores por defecto")
+                    token_info = {"input_tokens_total": 0, "input_tokens_real": 0, "cached_tokens": 0, "output_tokens": 0, "total_tokens": 0}
+                
+                total_tokens = token_info.get("total_tokens", 0)
+                if total_tokens > 0:
+                    input_tokens_total = token_info.get("input_tokens_total", 0)
+                    input_tokens_real = token_info.get("input_tokens_real", 0)
+                    cached_tokens = token_info.get("cached_tokens", 0)
+                    output_tokens = token_info.get("output_tokens", 0)
+                    
+                    cached_info = f", cached={cached_tokens}" if cached_tokens > 0 else ""
+                    tr(f"Tokens: input_total={input_tokens_total}, input_real={input_tokens_real}{cached_info}, output={output_tokens}, total={total_tokens}")
+                    try:
+                        costs = calculate_cost(model_used, input_tokens_real, output_tokens, cached_tokens)
+                        cached_cost_info = f", cached: ${costs.get('cost_cached_usd', 0):.6f}" if costs.get("cost_cached_usd", 0) > 0 else ""
+                        tr(f"Cost: ${costs.get('cost_total_usd', 0):.6f} (input: ${costs.get('cost_input_usd', 0):.6f}{cached_cost_info}, output: ${costs.get('cost_output_usd', 0):.6f})")
+                    except Exception as cost_err:
+                        tr(f"⚠️ Error calculando costos (continuando): {cost_err}")
+            except Exception as token_err:
+                tr(f"⚠️ Error extrayendo información de tokens (continuando sin bloquear bot): {token_err}")
+                import traceback
+                tr(f"Traceback: {traceback.format_exc()}")
+                # Asegurar que token_info siempre tiene valores por defecto
+                token_info = {"input_tokens_total": 0, "input_tokens_real": 0, "cached_tokens": 0, "output_tokens": 0, "total_tokens": 0}
+            
+            # Validación final: asegurar que token_info siempre es un dict válido antes de usar
+            if not isinstance(token_info, dict):
+                tr(f"⚠️ token_info no es un dict antes de usar: {type(token_info)}, usando valores por defecto")
+                token_info = {"input_tokens_total": 0, "input_tokens_real": 0, "cached_tokens": 0, "output_tokens": 0, "total_tokens": 0}
 
             rounds_used = round_idx
             final_response_id = response.id
@@ -196,18 +228,29 @@ async def process_chat_v2_core(req: ChatV2Request) -> Dict[str, Any]:
                 
                 tool_outputs.append(build_tool_output(result, getattr(item, "call_id", "")))
 
-            if token_info["total_tokens"] > 0:
-                log_token_usage(
-                    conversation_id=req.conversation_id,
-                    response_id=response.id,
-                    round_num=round_idx,
-                    model=model_used,
-                    input_tokens=token_info["input_tokens"],
-                    output_tokens=token_info["output_tokens"],
-                    total_tokens=token_info["total_tokens"],
-                    web_search_used=web_search_used_this_round,
-                    tools_called=tools_called_this_round
-                )
+            # Log token usage con manejo robusto de errores
+            try:
+                # Asegurar que token_info es un dict válido
+                if not isinstance(token_info, dict):
+                    token_info = {"input_tokens_total": 0, "input_tokens_real": 0, "cached_tokens": 0, "output_tokens": 0, "total_tokens": 0}
+                
+                total_tokens_val = token_info.get("total_tokens", 0)
+                if total_tokens_val > 0:
+                    log_token_usage(
+                        conversation_id=req.conversation_id,
+                        response_id=response.id,
+                        round_num=round_idx,
+                        model=model_used,
+                        input_tokens_total=token_info.get("input_tokens_total", 0),
+                        input_tokens_real=token_info.get("input_tokens_real", 0),
+                        cached_tokens=token_info.get("cached_tokens", 0),
+                        output_tokens=token_info.get("output_tokens", 0),
+                        total_tokens=total_tokens_val,
+                        web_search_used=web_search_used_this_round,
+                        tools_called=tools_called_this_round
+                    )
+            except Exception as log_err:
+                tr(f"⚠️ Error logueando token usage (continuando sin bloquear bot): {log_err}")
             
             prev_id = response.id
             next_input = tool_outputs

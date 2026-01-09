@@ -127,13 +127,51 @@ async def chat_v2(req: ChatV2Request):
             tr(f"Respuesta recibida de OpenAI (took {time.time() - t0:.2f}s)")
             tr(f"OpenAI response.id={response.id}")
             
-            # Extraer información de tokens y costos
-            token_info = extract_token_usage(response)
-            model_used = os.getenv("V2_MODEL", "gpt-5-mini")
-            if token_info["total_tokens"] > 0:
-                tr(f"Tokens: input={token_info['input_tokens']}, output={token_info['output_tokens']}, total={token_info['total_tokens']}")
-                costs = calculate_cost(model_used, token_info["input_tokens"], token_info["output_tokens"])
-                tr(f"Cost: ${costs['cost_total_usd']:.6f} (input: ${costs['cost_input_usd']:.6f}, output: ${costs['cost_output_usd']:.6f})")
+            # Extraer información de tokens y costos (con manejo robusto de errores)
+            try:
+                token_info = extract_token_usage(response)
+                model_used = os.getenv("V2_MODEL", "gpt-5-mini")
+                
+                # Asegurar que token_info es un dict válido antes de accederlo
+                if not isinstance(token_info, dict):
+                    tr(f"⚠️ token_info no es un dict después de extract_token_usage: {type(token_info)}, usando valores por defecto")
+                    token_info = {"input_tokens_total": 0, "input_tokens_real": 0, "cached_tokens": 0, "output_tokens": 0, "total_tokens": 0}
+                
+                # Debug: verificar que token_info tiene cached_tokens
+                cached_val = token_info.get("cached_tokens", 0)
+                if cached_val > 0:
+                    tr(f"[DEBUG chat_v2] token_info después de extract_token_usage: {token_info}")
+                
+                total_tokens = token_info.get("total_tokens", 0)
+                if total_tokens > 0:
+                    input_tokens_real = token_info.get("input_tokens_real", 0)
+                    input_tokens_total = token_info.get("input_tokens_total", 0)
+                    cached_tokens = token_info.get("cached_tokens", 0)
+                    output_tokens = token_info.get("output_tokens", 0)
+                    
+                    cached_info = f", cached={cached_tokens}" if cached_tokens > 0 else ""
+                    tr(f"Tokens: input_total={input_tokens_total}, input_real={input_tokens_real}{cached_info}, output={output_tokens}, total={total_tokens}")
+                    
+                    try:
+                        costs = calculate_cost(model_used, input_tokens_real, output_tokens, cached_tokens)
+                        cached_cost_info = f", cached: ${costs.get('cost_cached_usd', 0):.6f}" if costs.get("cost_cached_usd", 0) > 0 else ""
+                        tr(f"Cost: ${costs.get('cost_total_usd', 0):.6f} (input: ${costs.get('cost_input_usd', 0):.6f}{cached_cost_info}, output: ${costs.get('cost_output_usd', 0):.6f})")
+                    except Exception as cost_err:
+                        tr(f"⚠️ Error calculando costos (continuando sin bloquear bot): {cost_err}")
+                        import traceback
+                        tr(f"Traceback: {traceback.format_exc()}")
+            except Exception as token_err:
+                tr(f"⚠️ Error extrayendo información de tokens (continuando sin bloquear bot): {token_err}")
+                import traceback
+                tr(f"Traceback: {traceback.format_exc()}")
+                # Crear token_info por defecto seguro
+                token_info = {"input_tokens_total": 0, "input_tokens_real": 0, "cached_tokens": 0, "output_tokens": 0, "total_tokens": 0}
+                model_used = os.getenv("V2_MODEL", "gpt-5-mini")
+            
+            # Validación final: asegurar que token_info siempre es un dict válido antes de usar
+            if not isinstance(token_info, dict):
+                tr(f"⚠️ token_info no es un dict antes de usar: {type(token_info)}, usando valores por defecto")
+                token_info = {"input_tokens_total": 0, "input_tokens_real": 0, "cached_tokens": 0, "output_tokens": 0, "total_tokens": 0}
 
             rounds_used = round_idx
             final_response_id = response.id
@@ -143,19 +181,33 @@ async def chat_v2(req: ChatV2Request):
                 tr(f"Generando respuesta final para el usuario...")
                 tr(f"Respuesta final generada ({len(response.output_text)} caracteres)")
                 
-                # Log token usage para este round (respuesta final, sin tool calls)
-                if token_info["total_tokens"] > 0:
-                    log_token_usage(
-                        conversation_id=req.conversation_id,
-                        response_id=response.id,
-                        round_num=round_idx,
-                        model=model_used,
-                        input_tokens=token_info["input_tokens"],
-                        output_tokens=token_info["output_tokens"],
-                        total_tokens=token_info["total_tokens"],
-                        web_search_used=False,  # Si hay respuesta final, no hubo tool calls
-                        tools_called=[]  # Si hay respuesta final, no hubo tool calls
-                    )
+                # Log token usage para este round (respuesta final, sin tool calls) - con manejo robusto de errores
+                try:
+                    # Asegurar que token_info es un dict válido
+                    if not isinstance(token_info, dict):
+                        token_info = {"input_tokens_total": 0, "input_tokens_real": 0, "cached_tokens": 0, "output_tokens": 0, "total_tokens": 0}
+                    
+                    total_tokens_val = token_info.get("total_tokens", 0)
+                    if total_tokens_val > 0:
+                        log_token_usage(
+                            conversation_id=req.conversation_id,
+                            response_id=response.id,
+                            round_num=round_idx,
+                            model=model_used,
+                            input_tokens_total=token_info.get("input_tokens_total", 0),
+                            input_tokens_real=token_info.get("input_tokens_real", 0),
+                            cached_tokens=token_info.get("cached_tokens", 0),
+                            output_tokens=token_info.get("output_tokens", 0),
+                            total_tokens=total_tokens_val,
+                            web_search_used=False,  # Si hay respuesta final, no hubo tool calls
+                            tools_called=[]  # Si hay respuesta final, no hubo tool calls
+                        )
+                except Exception as log_err:
+                    tr(f"⚠️ Error logueando token usage (continuando): {log_err}")
+                    import traceback
+                    tr(f"Traceback: {traceback.format_exc()}")
+                except Exception as log_err:
+                    tr(f"⚠️ Error logueando token usage (continuando): {log_err}")
                 
                 # Guardar el response_id final para mantener contexto en la siguiente interacción
                 save_last_response_id(req.conversation_id, response.id)
@@ -322,19 +374,33 @@ async def chat_v2(req: ChatV2Request):
                     }
                 )
 
-            # Log token usage para este round (cuando hay tool calls)
-            if token_info["total_tokens"] > 0:
-                log_token_usage(
-                    conversation_id=req.conversation_id,
-                    response_id=response.id,
-                    round_num=round_idx,
-                    model=model_used,
-                    input_tokens=token_info["input_tokens"],
-                    output_tokens=token_info["output_tokens"],
-                    total_tokens=token_info["total_tokens"],
-                    web_search_used=web_search_used_this_round,
-                    tools_called=tools_called_this_round
-                )
+            # Log token usage para este round (cuando hay tool calls) - con manejo robusto de errores
+            try:
+                # Asegurar que token_info es un dict válido
+                if not isinstance(token_info, dict):
+                    token_info = {"input_tokens_total": 0, "input_tokens_real": 0, "cached_tokens": 0, "output_tokens": 0, "total_tokens": 0}
+                
+                total_tokens_val = token_info.get("total_tokens", 0)
+                if total_tokens_val > 0:
+                    log_token_usage(
+                        conversation_id=req.conversation_id,
+                        response_id=response.id,
+                        round_num=round_idx,
+                        model=model_used,
+                        input_tokens_total=token_info.get("input_tokens_total", 0),
+                        input_tokens_real=token_info.get("input_tokens_real", 0),
+                        cached_tokens=token_info.get("cached_tokens", 0),
+                        output_tokens=token_info.get("output_tokens", 0),
+                        total_tokens=total_tokens_val,
+                        web_search_used=web_search_used_this_round,
+                        tools_called=tools_called_this_round
+                    )
+            except Exception as log_err:
+                tr(f"⚠️ Error logueando token usage (continuando): {log_err}")
+                import traceback
+                tr(f"Traceback: {traceback.format_exc()}")
+                import traceback
+                tr(f"Traceback: {traceback.format_exc()}")
             
             prev_id = response.id
             next_input = tool_outputs
@@ -408,45 +474,58 @@ async def chat_v2_stream(req: ChatV2Request):
             response_sent = False
             
             while not task.done() or not response_sent:
-                # Obtener evento del emitter
-                event = await emitter.get_event(timeout=0.1)
-                if event:
-                    last_event_time = time.time()
-                    if event['type'] == 'status':
-                        yield f"data: {json.dumps({'type': 'status', 'message': event['message']}, ensure_ascii=False)}\n\n"
-                    elif event['type'] == 'response':
-                        yield f"data: {json.dumps({'type': 'response', 'content': event['content']}, ensure_ascii=False)}\n\n"
-                        response_sent = True
-                        break
-                    elif event['type'] == 'error':
-                        yield f"data: {json.dumps({'type': 'error', 'message': event['message']}, ensure_ascii=False)}\n\n"
-                        response_sent = True
-                        break
-                else:
-                    # Si el task terminó pero no recibimos respuesta por eventos, obtener resultado directo
-                    if task.done() and not response_sent:
-                        try:
-                            result = await task
-                            if result and result.get('response'):
-                                yield f"data: {json.dumps({'type': 'response', 'content': result['response']}, ensure_ascii=False)}\n\n"
-                                response_sent = True
-                                break
-                        except Exception as e:
-                            yield f"data: {json.dumps({'type': 'error', 'message': f'Error: {str(e)}'}, ensure_ascii=False)}\n\n"
+                try:
+                    # Obtener evento del emitter
+                    event = await emitter.get_event(timeout=0.1)
+                    if event:
+                        last_event_time = time.time()
+                        if event['type'] == 'status':
+                            yield f"data: {json.dumps({'type': 'status', 'message': event['message']}, ensure_ascii=False)}\n\n"
+                        elif event['type'] == 'response':
+                            yield f"data: {json.dumps({'type': 'response', 'content': event['content']}, ensure_ascii=False)}\n\n"
                             response_sent = True
                             break
-                    
-                    # Keep-alive: si pasan 8+ segundos sin eventos, enviar mensaje neutral
-                    if time.time() - last_event_time > keep_alive_interval:
-                        # Keep-alive sin mensaje visible (solo para mantener conexión)
-                        yield f": keep-alive\n\n"
-                        last_event_time = time.time()
+                        elif event['type'] == 'error':
+                            yield f"data: {json.dumps({'type': 'error', 'message': event['message']}, ensure_ascii=False)}\n\n"
+                            response_sent = True
+                            break
+                    else:
+                        # Si el task terminó pero no recibimos respuesta por eventos, obtener resultado directo
+                        if task.done() and not response_sent:
+                            try:
+                                result = await task
+                                if result and result.get('response'):
+                                    yield f"data: {json.dumps({'type': 'response', 'content': result['response']}, ensure_ascii=False)}\n\n"
+                                    response_sent = True
+                                    break
+                            except Exception as e:
+                                tr(f"⚠️ Error obteniendo resultado del task (continuando sin bloquear): {e}")
+                                import traceback
+                                tr(f"Traceback: {traceback.format_exc()}")
+                                yield f"data: {json.dumps({'type': 'error', 'message': f'Error procesando respuesta: {str(e)}'}, ensure_ascii=False)}\n\n"
+                                response_sent = True
+                                break
+                        
+                        # Keep-alive: si pasan 8+ segundos sin eventos, enviar mensaje neutral
+                        if time.time() - last_event_time > keep_alive_interval:
+                            # Keep-alive sin mensaje visible (solo para mantener conexión)
+                            yield f": keep-alive\n\n"
+                            last_event_time = time.time()
+                except Exception as loop_err:
+                    tr(f"⚠️ Error en loop de eventos (continuando): {loop_err}")
+                    # Continuar el loop sin bloquear
             
             # Asegurar que el task termine
             if not task.done():
-                await task
+                try:
+                    await task
+                except Exception as task_err:
+                    tr(f"⚠️ Error esperando task (continuando): {task_err}")
             
         except Exception as e:
+            tr(f"⚠️ Error en endpoint stream (enviando error al cliente): {e}")
+            import traceback
+            tr(f"Traceback: {traceback.format_exc()}")
             yield f"data: {json.dumps({'type': 'error', 'message': f'Error: {str(e)}'}, ensure_ascii=False)}\n\n"
         finally:
             set_step_emitter(None)  # Limpiar contexto
