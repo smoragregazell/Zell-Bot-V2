@@ -1,1 +1,6 @@
 token,user_email,timestamp_inicio,estado,motivo
+-,test@ejemplo.com,2026-01-13T22:15:42.708407,rechazado,Hash inválido
+-,test@ejemplo.com,2026-01-13T22:17:01.558695,rechazado,Hash inválido
+-,test@ejemplo.com,2026-01-13T22:28:45.527433,rechazado,Hash inválido
+-,test@ejemplo.com,2026-01-13T22:29:04.713408,rechazado,Hash inválido
+-,test@ejemplo.com,2026-01-13T23:10:26.707624,rechazado,Hash inválido

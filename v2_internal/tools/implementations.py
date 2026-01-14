@@ -14,6 +14,10 @@ from Tools.search_tickets import (
 )
 from Tools.search_docs import search_docs
 from Tools.get_docs import get_doc_context
+from Tools.get_etiquetas import get_etiqueta_context
+from Tools.search_etiquetas import search_etiquetas
+from Tools.get_quotes import get_quotes_context
+from Tools.search_quotes import search_quotes
 from Tools.query_tool import (
     generate_sql_query,
     fetch_query_results,
@@ -39,8 +43,13 @@ def tool_search_knowledge(args: Dict[str, Any], conversation_id: str) -> Dict[st
         return {"hits": [], "notes": ["query vacío"]}
 
     # Simple AUTO heuristic
+    # Para tickets: usar semántica por defecto (mejor calidad de resultados)
+    # Para docs: mantener hybrid/keyword según longitud
     if policy == "auto":
-        policy = "hybrid" if len(query.split()) <= 8 else "keyword"
+        if scope in ("tickets", "all"):
+            policy = "semantic"  # Semántica por defecto para tickets
+        else:
+            policy = "hybrid" if len(query.split()) <= 8 else "keyword"
 
     tr(f"Buscando en documentación interna Zell...")
     tr(f"Explorando scope={scope} ejecutando estrategia={policy}")
@@ -139,20 +148,143 @@ def tool_search_knowledge(args: Dict[str, Any], conversation_id: str) -> Dict[st
                 tr(f"Error en búsqueda semántica: {e}")
                 notes.append(f"semantic error: {e}")
 
+    # ---- ETIQUETAS ----
+    if scope in ("etiquetas", "all"):
+        tr(f"Buscando etiquetas del sistema ZELL...")
+        try:
+            etiquetas_res = search_etiquetas(query=query, top_k=top_k)
+            if etiquetas_res.get("ok"):
+                etiquetas_hits = etiquetas_res.get("hits", []) or []
+                count = len(etiquetas_hits)
+                if count > 0:
+                    tr(f"Encontradas {count} etiquetas")
+                else:
+                    tr(f"No se encontraron etiquetas")
+                
+                for h in etiquetas_hits:
+                    hits.append({
+                        "type": "etiqueta",
+                        "id": str(h.get("numero", "")),
+                        "score": float(h.get("score", 0.0)),
+                        "method": "semantic",
+                        "snippet": f"{h.get('etiqueta', '')} - {h.get('descripcion', '')}",
+                        "metadata": {
+                            "numero": h.get("numero"),
+                            "etiqueta": h.get("etiqueta"),
+                            "descripcion": h.get("descripcion"),
+                            "desc_tabla": h.get("desc_tabla"),
+                            "tipo_dato": h.get("tipo_dato"),
+                            "longitud": h.get("longitud"),
+                            "query": h.get("query"),
+                        },
+                    })
+            else:
+                err = etiquetas_res.get("error")
+                tr(f"Error al buscar etiquetas: {err}")
+                notes.append(f"etiquetas: error={err}")
+        except Exception as e:
+            tr(f"Excepción al buscar etiquetas: {e}")
+            notes.append(f"etiquetas: exception={e}")
+
+    # ---- QUOTES (COTIZACIONES) ----
+    if scope in ("quotes", "cotizaciones", "all"):
+        tr(f"Buscando cotizaciones del sistema ZELL...")
+        try:
+            quotes_res = search_quotes(query=query, top_k=top_k)
+            if quotes_res.get("ok"):
+                quotes_hits = quotes_res.get("hits", []) or []
+                count = len(quotes_hits)
+                if count > 0:
+                    tr(f"Encontradas {count} cotizaciones")
+                else:
+                    tr(f"No se encontraron cotizaciones")
+                
+                for h in quotes_hits:
+                    title = h.get("v_title", "")
+                    descriptions = h.get("descriptions") or ""
+                    snippet = title
+                    if descriptions:
+                        snippet = f"{title} - {descriptions[:100]}"
+                    
+                    hits.append({
+                        "type": "quote",
+                        "id": str(h.get("i_issue_id", "")),
+                        "score": float(h.get("score", 0.0)),
+                        "method": "semantic",
+                        "snippet": snippet[:220],
+                        "metadata": {
+                            "i_issue_id": h.get("i_issue_id"),
+                            "i_quote_id": h.get("i_quote_id"),
+                            "v_title": h.get("v_title"),
+                            "i_units": h.get("i_units"),
+                            "f_payment_date": h.get("f_payment_date"),
+                            "descriptions": h.get("descriptions"),
+                        },
+                    })
+            else:
+                err = quotes_res.get("error")
+                tr(f"Error al buscar cotizaciones: {err}")
+                notes.append(f"quotes: error={err}")
+        except Exception as e:
+            tr(f"Excepción al buscar cotizaciones: {e}")
+            notes.append(f"quotes: exception={e}")
+
     # ---- DOCS ----
     if scope in ("docs", "all"):
-        tr(f"Buscando en: {universe}")
-        try:
-            doc_res = search_docs(query=query, universe=universe, top_k=top_k)
-            if doc_res.get("ok"):
-                dhits = doc_res.get("hits", []) or []
-                count = len(dhits)
-                if count > 0:
-                    tr(f"Encontrados {count} documentos en {universe}")
+        # Si universe="all", buscar en todos los universos disponibles
+        if universe == "all":
+            available_universes = ["docs_org", "user_guides", "meetings_weekly"]
+            tr(f"Buscando en todos los universos: {available_universes}")
+            all_dhits = []
+            
+            for uni in available_universes:
+                try:
+                    doc_res = search_docs(query=query, universe=uni, top_k=top_k)
+                    if doc_res.get("ok"):
+                        uni_hits = doc_res.get("hits", []) or []
+                        if uni_hits:
+                            tr(f"Encontrados {len(uni_hits)} documentos en {uni}")
+                            # Agregar el universo a cada hit para identificarlo después
+                            for hit in uni_hits:
+                                hit["universe"] = uni
+                            all_dhits.extend(uni_hits)
+                        else:
+                            tr(f"No se encontraron documentos en {uni}")
+                except Exception as e:
+                    tr(f"Error buscando en {uni}: {e}")
+                    notes.append(f"{uni}: error={e}")
+            
+            # Ordenar todos los resultados por score (menor = mejor)
+            all_dhits.sort(key=lambda x: float(x.get("score", 999)))
+            # Tomar top_k global
+            dhits = all_dhits[:top_k]
+            tr(f"Total de resultados combinados: {len(dhits)} de {len(all_dhits)} encontrados")
+        else:
+            tr(f"Buscando en: {universe}")
+            try:
+                doc_res = search_docs(query=query, universe=universe, top_k=top_k)
+                if doc_res.get("ok"):
+                    dhits = doc_res.get("hits", []) or []
+                    count = len(dhits)
+                    if count > 0:
+                        tr(f"Encontrados {count} documentos en {universe}")
+                    else:
+                        tr(f"No se encontraron documentos en {universe}")
                 else:
-                    tr(f"No se encontraron documentos en {universe}")
-
-                for h in dhits:
+                    err = doc_res.get("error")
+                    tr(f"Error al buscar documentos: {err}")
+                    notes.append(f"docs: error={err}")
+                    dhits = []
+            except Exception as e:
+                tr(f"Excepción al buscar documentos: {e}")
+                notes.append(f"docs: exception={e}")
+                dhits = []
+        
+        # Procesar hits (ya sea de un universo o de todos)
+        for h in dhits:
+                    # Obtener el universo real del hit (si viene de búsqueda "all", el hit tiene su propio universo)
+                    hit_universe = h.get("universe") if h.get("universe") else universe
+                    
                     # Construir snippet según tipo de documento
                     snippet_parts = []
                     if h.get("title"):
@@ -178,7 +310,7 @@ def tool_search_knowledge(args: Dict[str, Any], conversation_id: str) -> Dict[st
                         "title": h.get("title"),
                         "section": h.get("section"),
                         "source_path": h.get("source_path"),
-                        "universe": universe,
+                        "universe": hit_universe,
                         "codigo": h.get("codigo"),
                         "fecha_emision": h.get("fecha_emision"),
                         "revision": h.get("revision"),
@@ -216,13 +348,6 @@ def tool_search_knowledge(args: Dict[str, Any], conversation_id: str) -> Dict[st
                             "metadata": metadata,
                         }
                     )
-            else:
-                err = doc_res.get("error")
-                tr(f"Error al buscar documentos: {err}")
-                notes.append(f"docs: error={err}")
-        except Exception as e:
-            tr(f"Excepción al buscar documentos: {e}")
-            notes.append(f"docs: exception={e}")
 
     final_hits = _dedupe_hits(hits, top_k=top_k)
     total_found = len(final_hits)
@@ -261,6 +386,77 @@ def tool_get_item(args: Dict[str, Any], conversation_id: str) -> Dict[str, Any]:
                 "error": f"get_doc_context_failed: {e}",
                 "universe": universe,
                 "chunk_id": item_id,
+            }
+
+    # ---- ETIQUETA ----
+    if item_type == "etiqueta":
+        tr(f"Obteniendo información de la etiqueta {item_id}")
+        try:
+            # item_id puede ser chunk_id (ej: "etiqueta_101") o número (ej: "101")
+            # Intentar primero como número
+            numero = None
+            chunk_id = None
+            try:
+                numero = int(item_id)
+                chunk_id = None
+            except (ValueError, TypeError):
+                # Si no es número, tratar como chunk_id
+                chunk_id = item_id
+                numero = None
+            
+            if numero is not None:
+                result = get_etiqueta_context(numeros=[numero])
+            else:
+                result = get_etiqueta_context(chunk_ids=[chunk_id])
+            
+            if result.get("ok") and result.get("etiquetas"):
+                etiqueta = result.get("etiquetas", [{}])[0]
+                etiqueta_code = etiqueta.get("etiqueta") or f"#{etiqueta.get('numero', 'N/A')}"
+                descripcion = etiqueta.get("descripcion") or "N/A"
+                tr(f"Etiqueta obtenida: {etiqueta_code} - {descripcion[:60]}")
+            else:
+                tr(f"Obteniendo información de la etiqueta...")
+            return result
+        except Exception as e:
+            return {
+                "ok": False,
+                "error": f"get_etiqueta_context_failed: {e}",
+                "item_id": item_id,
+            }
+
+    # ---- QUOTE (COTIZACION) ----
+    if item_type == "quote":
+        tr(f"Obteniendo información de la cotización {item_id}")
+        try:
+            # item_id puede ser chunk_id (ej: "quote_1054") o i_issue_id (ej: "1054")
+            # Intentar primero como número (i_issue_id)
+            issue_id = None
+            chunk_id = None
+            try:
+                issue_id = int(item_id)
+                chunk_id = None
+            except (ValueError, TypeError):
+                # Si no es número, tratar como chunk_id
+                chunk_id = item_id
+                issue_id = None
+            
+            if issue_id is not None:
+                result = get_quotes_context(i_issue_ids=[issue_id])
+            else:
+                result = get_quotes_context(chunk_ids=[chunk_id])
+            
+            if result.get("ok") and result.get("quotes"):
+                quote = result.get("quotes", [{}])[0]
+                title = quote.get("v_title") or "N/A"
+                tr(f"Cotización obtenida: {title[:60]}")
+            else:
+                tr(f"Obteniendo información de la cotización...")
+            return result
+        except Exception as e:
+            return {
+                "ok": False,
+                "error": f"get_quotes_context_failed: {e}",
+                "item_id": item_id,
             }
 
     # ---- TICKET ----
@@ -395,9 +591,184 @@ async def tool_query_tickets(args: Dict[str, Any], conversation_id: str) -> Dict
         return {"error": f"Error ejecutando consulta: {str(e)}"}
 
 
+async def tool_analyze_client_email(args: Dict[str, Any], conversation_id: str) -> Dict[str, Any]:
+    """
+    Tool para analizar correos de clientes: extrae conceptos clave, busca tickets similares con soluciones,
+    y obtiene el procedimiento de atención para proponer siguientes pasos.
+    """
+    email_content = (args.get("email_content") or "").strip()
+    
+    if not email_content:
+        return {"error": "email_content es requerido"}
+    
+    tr(f"Analizando correo de cliente...")
+    
+    # Constante del doc_id del procedimiento P-OPR-01
+    P_OPR_01_DOC_ID = "077d56bcd4cf"
+    
+    result: Dict[str, Any] = {
+        "email_content": email_content,
+        "similar_tickets_hits": [],
+        "similar_tickets_details": [],
+        "procedure_document": None,
+    }
+    
+    # 1. Buscar tickets similares usando búsqueda semántica del contenido del correo
+    # (extrae automáticamente conceptos clave del problema/situación/requerimiento)
+    tr(f"Buscando tickets similares al contenido del correo (búsqueda semántica)...")
+    try:
+        similar_result = tool_search_knowledge(
+            {
+                "query": email_content,
+                "scope": "tickets",
+                "policy": "semantic",
+                "top_k": 5,  # Buscar más tickets para encontrar soluciones
+            },
+            conversation_id
+        )
+        if similar_result.get("hits"):
+            result["similar_tickets_hits"] = similar_result.get("hits", [])
+            tr(f"Encontrados {len(result['similar_tickets_hits'])} tickets similares")
+            
+            # 2. Obtener detalles de los tickets más relevantes (top 2-3) para ver si tienen soluciones
+            top_tickets_to_get = min(3, len(result["similar_tickets_hits"]))
+            tr(f"Obteniendo detalles de los {top_tickets_to_get} tickets más relevantes para buscar soluciones...")
+            
+            for i, hit in enumerate(result["similar_tickets_hits"][:top_tickets_to_get]):
+                ticket_id = hit.get("id")
+                if ticket_id:
+                    try:
+                        ticket_detail = tool_get_item(
+                            {"type": "ticket", "id": ticket_id, "include_comments": True},
+                            conversation_id
+                        )
+                        if "error" not in ticket_detail:
+                            result["similar_tickets_details"].append({
+                                "ticket_id": ticket_id,
+                                "score": hit.get("score"),
+                                "ticket_data": ticket_detail.get("ticket_data"),
+                                "ticket_comments": ticket_detail.get("ticket_comments"),
+                            })
+                            tr(f"Ticket #{ticket_id} obtenido")
+                    except Exception as e:
+                        tr(f"Error al obtener ticket #{ticket_id}: {e}")
+    except Exception as e:
+        tr(f"Error al buscar tickets similares: {e}")
+    
+    # 3. Obtener el documento completo del Procedimiento P-OPR-01
+    tr(f"Obteniendo documento completo P-OPR-01 (doc_id: {P_OPR_01_DOC_ID})...")
+    try:
+        doc_result = get_doc_context(
+            universe="docs_org",
+            doc_id=P_OPR_01_DOC_ID,
+            max_chunks=9999  # Obtener todos los chunks
+        )
+        if doc_result.get("ok"):
+            blocks_count = len(doc_result.get("blocks", []))
+            tr(f"Documento P-OPR-01 obtenido: {blocks_count} chunks")
+            result["procedure_document"] = {
+                "title": "P-OPR-01 Procedimiento de Solicitud de atención",
+                "doc_id": P_OPR_01_DOC_ID,
+                "blocks": doc_result.get("blocks", []),
+                "total_chunks": blocks_count,
+            }
+        else:
+            tr(f"Error al obtener documento P-OPR-01: {doc_result.get('error')}")
+    except Exception as e:
+        tr(f"Excepción al obtener documento: {e}")
+    
+    result["ok"] = True
+    result["note"] = (
+        "Información del correo, tickets similares (con detalles para buscar soluciones) y procedimiento obtenidos. "
+        "Analiza los conceptos clave del problema/situación/requerimiento, revisa si hay soluciones en los tickets similares, "
+        "y propone siguientes pasos según el procedimiento P-OPR-01."
+    )
+    
+    return result
+
+
+async def tool_propose_next_steps(args: Dict[str, Any], conversation_id: str) -> Dict[str, Any]:
+    """
+    Tool para proponer siguientes pasos basándose en un ticket y el procedimiento de atención.
+    Obtiene el ticket completo y el documento completo del Procedimiento P-OPR-01.
+    """
+    ticket_id = str(args.get("ticket_id") or "").strip()
+    
+    if not ticket_id:
+        return {"error": "ticket_id es requerido"}
+    
+    tr(f"Analizando ticket #{ticket_id} para proponer siguientes pasos...")
+    
+    # 1. Obtener el ticket completo
+    try:
+        ticket_result = tool_get_item(
+            {"type": "ticket", "id": ticket_id, "include_comments": True},
+            conversation_id
+        )
+        
+        if "error" in ticket_result:
+            tr(f"Error al obtener ticket: {ticket_result['error']}")
+            return {"error": f"No se pudo obtener el ticket: {ticket_result['error']}"}
+        
+        tr(f"Ticket #{ticket_id} obtenido exitosamente")
+    except Exception as e:
+        tr(f"Excepción al obtener ticket: {e}")
+        return {"error": f"Error al obtener ticket: {str(e)}"}
+    
+    # 2. Obtener el documento completo del Procedimiento P-OPR-01
+    # doc_id conocido del documento P-OPR-01 Procedimiento de Solicitud de atención
+    P_OPR_01_DOC_ID = "077d56bcd4cf"
+    
+    tr(f"Obteniendo documento completo P-OPR-01 (doc_id: {P_OPR_01_DOC_ID})...")
+    try:
+        doc_result = get_doc_context(
+            universe="docs_org",
+            doc_id=P_OPR_01_DOC_ID,
+            max_chunks=9999  # Obtener todos los chunks
+        )
+        
+        if not doc_result.get("ok"):
+            tr(f"Error al obtener documento P-OPR-01: {doc_result.get('error')}")
+            return {
+                "error": f"No se pudo obtener el documento P-OPR-01: {doc_result.get('error')}",
+                "ticket_data": ticket_result.get("ticket_data"),
+                "ticket_comments": ticket_result.get("ticket_comments"),
+            }
+        
+        blocks_count = len(doc_result.get("blocks", []))
+        tr(f"Documento P-OPR-01 obtenido: {blocks_count} chunks")
+    except Exception as e:
+        tr(f"Excepción al obtener documento: {e}")
+        return {
+            "error": f"Error al obtener documento P-OPR-01: {str(e)}",
+            "ticket_data": ticket_result.get("ticket_data"),
+            "ticket_comments": ticket_result.get("ticket_comments"),
+        }
+    
+    # 3. Retornar información estructurada
+    return {
+        "ok": True,
+        "ticket_id": ticket_id,
+        "ticket_data": ticket_result.get("ticket_data"),
+        "ticket_comments": ticket_result.get("ticket_comments"),
+        "procedure_document": {
+            "title": "P-OPR-01 Procedimiento de Solicitud de atención",
+            "doc_id": P_OPR_01_DOC_ID,
+            "blocks": doc_result.get("blocks", []),
+            "total_chunks": len(doc_result.get("blocks", [])),
+        },
+        "note": (
+            "Información del ticket y procedimiento completo obtenidos. "
+            "Analiza el estatus del ticket y el procedimiento para proponer los siguientes pasos."
+        ),
+    }
+
+
 TOOL_IMPL = {
     "search_knowledge": tool_search_knowledge,
     "get_item": tool_get_item,
     "query_tickets": tool_query_tickets,
+    "analyze_client_email": tool_analyze_client_email,
+    "propose_next_steps": tool_propose_next_steps,
 }
 

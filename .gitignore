@@ -162,3 +162,6 @@ cython_debug/
 Data/embeddings.npy
 Data/faiss_index_ip.bin
 
+# Embedding cache files (too large for GitHub)
+*_emb_cache.jsonl
+

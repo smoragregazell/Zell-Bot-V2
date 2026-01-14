@@ -141,7 +141,8 @@ def get_doc_context(
         for m in meta:
             if m.get("doc_id") == doc_id:
                 selected.append(m)
-                if len(selected) >= max_chunks:
+                # Si max_chunks es muy grande (>= 9999), obtener todos los chunks
+                if max_chunks < 9999 and len(selected) >= max_chunks:
                     break
     else:
         return {"ok": False, "error": "provide chunk_ids or doc_id"}

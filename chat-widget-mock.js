@@ -216,11 +216,160 @@
                 box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
                 text-align: left;
                 transition: transform 0.2s, box-shadow 0.2s;
+                cursor: pointer;
             }
 
             .feature-item:hover {
                 transform: translateY(-2px);
                 box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            }
+
+            .feature-info-modal {
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0, 0, 0, 0.5);
+                display: none;
+                align-items: center;
+                justify-content: center;
+                z-index: 10002;
+                padding: 20px;
+            }
+
+            .feature-info-modal.open {
+                display: flex;
+            }
+
+            .feature-info-content {
+                background: white;
+                border-radius: 16px;
+                max-width: 500px;
+                width: 100%;
+                max-height: 80vh;
+                overflow-y: auto;
+                box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+                animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+
+            .feature-info-header {
+                background: linear-gradient(135deg, #e5a500 0%, #ffcd3c 100%);
+                padding: 20px;
+                border-radius: 16px 16px 0 0;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+            }
+
+            .feature-info-header h3 {
+                margin: 0;
+                font-size: 20px;
+                font-weight: 700;
+                color: #000;
+                display: flex;
+                align-items: center;
+                gap: 12px;
+            }
+
+            .feature-info-close {
+                background: transparent;
+                border: none;
+                font-size: 24px;
+                cursor: pointer;
+                color: #000;
+                padding: 0;
+                width: 32px;
+                height: 32px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                border-radius: 50%;
+                transition: background 0.2s;
+            }
+
+            .feature-info-close:hover {
+                background: rgba(0, 0, 0, 0.1);
+            }
+
+            .feature-info-body {
+                padding: 24px;
+            }
+
+            .feature-info-section {
+                margin-bottom: 24px;
+            }
+
+            .feature-info-section:last-child {
+                margin-bottom: 0;
+            }
+
+            .feature-info-section h4 {
+                margin: 0 0 12px 0;
+                font-size: 16px;
+                font-weight: 700;
+                color: #1a1a1a;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+
+            .feature-info-section p {
+                margin: 0 0 12px 0;
+                font-size: 14px;
+                color: #555;
+                line-height: 1.6;
+            }
+
+            .feature-examples {
+                background: #f8f9fa;
+                border-radius: 8px;
+                padding: 12px;
+                margin-top: 8px;
+            }
+
+            .feature-example {
+                padding: 8px 12px;
+                background: white;
+                border-radius: 6px;
+                margin-bottom: 8px;
+                font-size: 13px;
+                color: #333;
+                border-left: 3px solid #e5a500;
+                cursor: pointer;
+                transition: background 0.2s;
+            }
+
+            .feature-example:hover {
+                background: #fff9e6;
+            }
+
+            .feature-example:last-child {
+                margin-bottom: 0;
+            }
+
+            .feature-tips {
+                background: #e8f4f8;
+                border-left: 4px solid #0c5460;
+                padding: 12px;
+                border-radius: 6px;
+                margin-top: 8px;
+            }
+
+            .feature-tips ul {
+                margin: 8px 0 0 0;
+                padding-left: 20px;
+            }
+
+            .feature-tips li {
+                font-size: 13px;
+                color: #0c5460;
+                margin-bottom: 6px;
+                line-height: 1.5;
+            }
+
+            .feature-tips li:last-child {
+                margin-bottom: 0;
             }
 
             .feature-icon {
@@ -515,6 +664,211 @@
     `;
 
     // ============================================
+    // FUNCIONES DE INFORMACIÓN DE FEATURES
+    // ============================================
+    const featureInfo = {
+        tickets: {
+            title: '🎫 Consulta información de tickets',
+            description: 'Busca y consulta información detallada de tickets del sistema. Puedes buscar por número específico, palabras clave, o usar búsqueda semántica para encontrar tickets relacionados.',
+            examples: [
+                'Muéstrame el ticket 36816',
+                '¿En qué ticket se habló de migración ISSTEY?',
+                'Busca tickets sobre domiciliación',
+                'Tickets abiertos por Javier en diciembre'
+            ],
+            tips: [
+                'Para tickets específicos, menciona el número directamente (ej: "ticket 12345")',
+                'Usa búsqueda semántica para encontrar tickets relacionados por concepto',
+                'Puedes pedir comentarios y detalles completos de cualquier ticket',
+                'Combina búsquedas: "tickets de Exitus sobre errores de configuración"'
+            ]
+        },
+        etiquetas: {
+            title: '🏷️ Etiquetas del sistema ZELL',
+            description: 'Busca etiquetas del sistema ZELL por nombre de columna, descripción o código. Encuentra qué etiqueta corresponde a cada campo de la base de datos y obtén su información completa.',
+            examples: [
+                '¿Qué etiqueta corresponde a Person ID?',
+                'Buscar etiqueta para número de identificación',
+                'Etiqueta Person Full Name',
+                '¿Cuál es la etiqueta para nombre de persona?'
+            ],
+            tips: [
+                'Puedes buscar por nombre técnico de columna (ej: "Person ID")',
+                'También puedes buscar por descripción en español',
+                'Menciona el código de etiqueta si lo conoces (ej: "[i101: PID]")',
+                'La búsqueda encuentra coincidencias tanto en español como en inglés'
+            ]
+        },
+        guias: {
+            title: '📚 Guías de usuario del sistema',
+            description: 'Accede a guías paso a paso para usar el sistema Zell. Encuentra instrucciones detalladas sobre cómo configurar módulos, realizar procesos y usar funcionalidades del sistema.',
+            examples: [
+                '¿Cómo hacer reintentos de domiciliación?',
+                'Pasos para configurar políticas de autorización',
+                '¿Cómo cargar una tabla de amortización personalizada?',
+                'Guía para ingresar al módulo de cobranza'
+            ],
+            tips: [
+                'Menciona "en Zell" o "en el sistema" para buscar guías específicas',
+                'Incluye nombres de módulos (Cobranza, Domiciliación, Tickets, etc.)',
+                'Pide "pasos para..." o "cómo hacer..." para obtener instrucciones',
+                'Las guías incluyen numeración de pasos para seguir el proceso ordenadamente'
+            ]
+        },
+        documentos: {
+            title: '📄 Documentos y políticas ISO',
+            description: 'Consulta políticas organizacionales, procedimientos administrativos, manuales ISO y reglamentos internos. Información oficial sobre estándares y lineamientos de la empresa.',
+            examples: [
+                '¿Cuál es la política de seguridad de la información?',
+                'Buscar procedimiento de control de accesos',
+                '¿Qué dice el manual ISO sobre gestión de incidentes?',
+                'Políticas de continuidad del negocio'
+            ],
+            tips: [
+                'Usa términos como "política", "procedimiento", "manual ISO"',
+                'Menciona códigos de documentos si los conoces (ej: "P-SGSI-01")',
+                'Puedes buscar por dominio o familia de documentos',
+                'Los resultados incluyen fecha de emisión y revisión'
+            ]
+        },
+        soluciones: {
+            title: '💡 Soluciones en tickets similares',
+            description: 'Encuentra soluciones documentadas a problemas similares. Busca en tickets cerrados o resueltos para ver cómo se solucionaron casos parecidos anteriormente.',
+            examples: [
+                '¿Cómo se resolvió el problema de migración ISSTEY?',
+                'Busca soluciones para errores de domiciliación',
+                '¿Hay solución documentada para este problema?',
+                'Tickets similares al 36816 que tengan solución'
+            ],
+            tips: [
+                'Menciona el problema específico que estás enfrentando',
+                'Puedes proporcionar un ticket de referencia para buscar similares',
+                'Los tickets cerrados/resueltos tienen mayor prioridad',
+                'Incluye términos técnicos o nombres de módulos para mejores resultados'
+            ]
+        },
+        conteos: {
+            title: '📊 Conteos y análisis de tickets',
+            description: 'Obtén estadísticas y análisis cuantitativos de tickets. Cuenta tickets por criterios específicos, filtra por fechas, personas, clientes o estatus.',
+            examples: [
+                '¿Cuántos tickets se abrieron en diciembre?',
+                'Tickets activos de Exitus',
+                '¿Cuántos tickets tiene Javier abiertos?',
+                'Tickets en estatus Desarrollo del último mes'
+            ],
+            tips: [
+                'Usa preguntas cuantitativas: "cuántos", "cuántas", "conteo"',
+                'Especifica períodos de tiempo (diciembre, último mes, 2024)',
+                'Combina múltiples filtros: cliente + estatus + fecha',
+                'Puedes pedir listas de tickets con sus campos principales'
+            ]
+        },
+        reuniones: {
+            title: '👥 Reuniones semanales y minutas',
+            description: 'Consulta minutas de reuniones semanales donde se discuten problemas, soluciones y experiencias del equipo. Encuentra casos similares y decisiones tomadas.',
+            examples: [
+                '¿Alguien ha tenido este problema antes?',
+                '¿Cómo se resolvió esto en reuniones anteriores?',
+                'Buscar temas sobre domiciliación en reuniones',
+                '¿Qué se habló en la reunión del 4 de julio?'
+            ],
+            tips: [
+                'Usa frases como "problema similar", "experiencia similar", "caso parecido"',
+                'Menciona fechas específicas si las conoces',
+                'Puedes buscar por tema o asunto discutido',
+                'Los resultados incluyen fecha, participantes y temas tratados'
+            ]
+        },
+        'tiempo-real': {
+            title: '🌐 Información en tiempo real',
+            description: 'Obtén información actualizada de Internet: tipo de cambio, clima, noticias recientes y eventos socioeconómicos. Datos que cambian frecuentemente y no están en el conocimiento interno.',
+            examples: [
+                '¿Cuál es el tipo de cambio peso dólar hoy?',
+                'Clima en Ciudad de México',
+                'Noticias de hoy sobre tecnología',
+                '¿Cuál es la inflación actual?'
+            ],
+            tips: [
+                'Usa palabras clave como "hoy", "actual", "en tiempo real"',
+                'Para monedas: menciona las monedas específicas (peso/dólar, euro)',
+                'Para clima: incluye la ciudad o ubicación',
+                'Esta herramienta se usa automáticamente cuando se necesita información actualizada'
+            ]
+        }
+    };
+
+    function showFeatureInfo(featureKey) {
+        const info = featureInfo[featureKey];
+        if (!info) return;
+
+        const modal = document.getElementById('feature-info-modal');
+        const title = document.getElementById('feature-info-title');
+        const body = document.getElementById('feature-info-body');
+
+        if (!modal || !title || !body) return;
+
+        title.innerHTML = info.title;
+        
+        let examplesHTML = '';
+        info.examples.forEach((example, idx) => {
+            // Usar índice para evitar problemas con comillas
+            const safeExample = example.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+            examplesHTML += `<div class="feature-example" data-example="${safeExample}">${example}</div>`;
+        });
+
+        let tipsHTML = '<ul>';
+        info.tips.forEach(tip => {
+            tipsHTML += `<li>${tip}</li>`;
+        });
+        tipsHTML += '</ul>';
+
+        body.innerHTML = `
+            <div class="feature-info-section">
+                <h4>📖 ¿Qué hace?</h4>
+                <p>${info.description}</p>
+            </div>
+            <div class="feature-info-section">
+                <h4>💬 Ejemplos de preguntas</h4>
+                <p>Haz clic en cualquier ejemplo para usarlo:</p>
+                <div class="feature-examples">
+                    ${examplesHTML}
+                </div>
+            </div>
+            <div class="feature-info-section">
+                <h4>✨ Cómo aumentar efectividad</h4>
+                <div class="feature-tips">
+                    ${tipsHTML}
+                </div>
+            </div>
+        `;
+
+        modal.classList.add('open');
+    }
+
+    function insertExample(text) {
+        const chatInput = document.getElementById('chat-input');
+        if (chatInput) {
+            chatInput.value = text;
+            chatInput.focus();
+            // Cerrar el modal
+            const modal = document.getElementById('feature-info-modal');
+            if (modal) {
+                modal.classList.remove('open');
+            }
+            // Ocultar welcome screen y mostrar chat
+            const welcomeScreen = document.getElementById('welcome-screen');
+            const chatContainer = document.getElementById('chat-container');
+            if (welcomeScreen && chatContainer) {
+                welcomeScreen.classList.add('hidden');
+                chatContainer.classList.add('active');
+            }
+        }
+    }
+
+    // Hacer insertExample disponible globalmente
+    window.insertExample = insertExample;
+
+    // ============================================
     // FUNCIONES DE UTILIDAD
     // ============================================
     function formatMessage(text) {
@@ -549,35 +903,35 @@
                 <h2 class="welcome-title">Habla con la IA de Zell</h2>
                 <p class="welcome-subtitle">Tu asistente inteligente para tickets, documentos y más</p>
                 <div class="welcome-features">
-                    <div class="feature-item">
+                    <div class="feature-item" data-feature="tickets">
                         <div class="feature-icon">🎫</div>
                         <div class="feature-text">Consulta información de tickets</div>
                     </div>
-                    <div class="feature-item">
-                        <div class="feature-icon">🔍</div>
-                        <div class="feature-text">Búsquedas semánticas y SQL</div>
+                    <div class="feature-item" data-feature="etiquetas">
+                        <div class="feature-icon">🏷️</div>
+                        <div class="feature-text">Etiquetas del sistema ZELL</div>
                     </div>
-                    <div class="feature-item">
+                    <div class="feature-item" data-feature="guias">
                         <div class="feature-icon">📚</div>
                         <div class="feature-text">Guías de usuario del sistema</div>
                     </div>
-                    <div class="feature-item">
+                    <div class="feature-item" data-feature="documentos">
                         <div class="feature-icon">📄</div>
                         <div class="feature-text">Documentos y políticas ISO</div>
                     </div>
-                    <div class="feature-item">
+                    <div class="feature-item" data-feature="soluciones">
                         <div class="feature-icon">💡</div>
                         <div class="feature-text">Soluciones en tickets similares</div>
                     </div>
-                    <div class="feature-item">
+                    <div class="feature-item" data-feature="conteos">
                         <div class="feature-icon">📊</div>
                         <div class="feature-text">Conteos y análisis de tickets</div>
                     </div>
-                    <div class="feature-item">
+                    <div class="feature-item" data-feature="reuniones">
                         <div class="feature-icon">👥</div>
                         <div class="feature-text">Reuniones semanales y minutas</div>
                     </div>
-                    <div class="feature-item">
+                    <div class="feature-item" data-feature="tiempo-real">
                         <div class="feature-icon">🌐</div>
                         <div class="feature-text">Información en tiempo real</div>
                     </div>
@@ -609,6 +963,20 @@
         `;
     }
 
+    function createFeatureInfoModal() {
+        return `
+            <div class="feature-info-modal" id="feature-info-modal">
+                <div class="feature-info-content">
+                    <div class="feature-info-header">
+                        <h3 id="feature-info-title"></h3>
+                        <button class="feature-info-close" id="feature-info-close">✕</button>
+                    </div>
+                    <div class="feature-info-body" id="feature-info-body"></div>
+                </div>
+            </div>
+        `;
+    }
+
     function createPopup() {
         return `
             <div id="zell-chat-popup">
@@ -622,6 +990,7 @@
                 ${createWelcomeScreen()}
                 ${createChatContainer()}
             </div>
+            ${createFeatureInfoModal()}
         `;
     }
 
@@ -1003,6 +1372,45 @@
         chatInput?.addEventListener('input', function() {
             this.style.height = 'auto';
             this.style.height = Math.min(this.scrollHeight, 150) + 'px';
+        });
+
+        // Event listeners para feature items
+        const featureItems = document.querySelectorAll('.feature-item');
+        featureItems.forEach(item => {
+            item.addEventListener('click', () => {
+                const featureKey = item.getAttribute('data-feature');
+                if (featureKey) {
+                    showFeatureInfo(featureKey);
+                }
+            });
+        });
+
+        // Event listeners para ejemplos (usando delegación de eventos)
+        document.addEventListener('click', (e) => {
+            if (e.target.classList.contains('feature-example')) {
+                const exampleText = e.target.getAttribute('data-example');
+                if (exampleText) {
+                    // Decodificar entidades HTML
+                    const textarea = document.createElement('textarea');
+                    textarea.innerHTML = exampleText;
+                    const decodedText = textarea.value;
+                    insertExample(decodedText);
+                }
+            }
+        });
+
+        // Cerrar modal de información
+        const featureInfoClose = document.getElementById('feature-info-close');
+        const featureInfoModal = document.getElementById('feature-info-modal');
+        featureInfoClose?.addEventListener('click', () => {
+            featureInfoModal?.classList.remove('open');
+        });
+        
+        // Cerrar modal al hacer clic fuera
+        featureInfoModal?.addEventListener('click', (e) => {
+            if (e.target === featureInfoModal) {
+                featureInfoModal.classList.remove('open');
+            }
         });
 
         // Asegurar que el input esté habilitado y funcional desde el inicio

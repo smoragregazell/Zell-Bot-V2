@@ -64,9 +64,9 @@ TOOLS: List[Dict[str, Any]] = [
                 "query": {"type": "string"},
                 "scope": {
                     "type": "string",
-                    "enum": ["tickets", "docs", "all"],
+                    "enum": ["tickets", "docs", "etiquetas", "quotes", "cotizaciones", "all"],
                     "default": "all",
-                    "description": "Scope de búsqueda: 'tickets' para tickets, 'docs' para documentos, 'all' para ambos.",
+                    "description": "Scope de búsqueda: 'tickets' para tickets, 'docs' para documentos, 'etiquetas' para etiquetas del sistema ZELL, 'quotes'/'cotizaciones' para cotizaciones, 'all' para todos.",
                 },
                 "policy": {
                     "type": "string",
@@ -77,7 +77,7 @@ TOOLS: List[Dict[str, Any]] = [
                     "type": "string",
                     "description": (
                         "Universo de documentos cuando scope=docs. "
-                        "Opciones (en orden de prioridad para preguntas sobre el sistema): "
+                        "Opciones: "
                         "'user_guides' (PRIMERO para preguntas sobre el sistema Zell - guías de usuario del sistema Zell). "
                         "**ÚSALO PRIMERO** cuando el usuario pregunte sobre: cómo usar el sistema Zell, cómo hacer algo en Zell/en el sistema, "
                         "procedimientos paso a paso en el sistema, configuración de módulos, captura de información, "
@@ -91,7 +91,11 @@ TOOLS: List[Dict[str, Any]] = [
                         "situaciones que el equipo ya vivió ('¿alguien ha tenido este problema?', 'experiencia similar', 'caso parecido', "
                         "'¿cómo se resolvió esto antes?', '¿esto ya pasó?'). "
                         "También para: reuniones específicas, temas tratados en juntas, asistentes, fechas de reuniones, decisiones o acuerdos. "
-                        "REGLA CRÍTICA: Si la pregunta menciona 'en Zell', 'en el sistema', nombres de módulos, o acciones operativas del sistema → usa 'user_guides' PRIMERO."
+                        "'all' (ÚLTIMO RECURSO - buscar en TODOS los universos: docs_org, user_guides, meetings_weekly). "
+                        "Úsalo SOLO cuando: (1) el usuario preguntó '¿dónde se habla sobre X?' o 'busca en todos lados' Y (2) ya preguntaste al usuario dónde buscar Y (3) el usuario no sabe o no especificó dónde buscar. "
+                        "Los resultados se combinan y ordenan por relevancia. "
+                        "REGLA CRÍTICA: Si la pregunta menciona 'en Zell', 'en el sistema', nombres de módulos, o acciones operativas del sistema → usa 'user_guides' PRIMERO. "
+                        "Si no estás seguro dónde buscar, PREGUNTA AL USUARIO primero: '¿Dónde te gustaría que busque? ¿En tickets, documentos organizacionales, minutas o guías de usuario?'"
                     ),
                     "default": "docs_org",
                 },
@@ -120,10 +124,10 @@ TOOLS: List[Dict[str, Any]] = [
             "properties": {
                 "type": {
                     "type": "string", 
-                    "enum": ["ticket", "doc"],
-                    "description": "Tipo de item: 'ticket' para tickets, 'doc' para documentos."
+                    "enum": ["ticket", "doc", "etiqueta", "quote"],
+                    "description": "Tipo de item: 'ticket' para tickets, 'doc' para documentos, 'etiqueta' para etiquetas del sistema ZELL, 'quote' para cotizaciones."
                 },
-                "id": {"type": "string", "description": "ID del item. Para tickets, usa el número del ticket (ej: '36816', '12345')."},
+                "id": {"type": "string", "description": "ID del item. Para tickets, usa el número del ticket (ej: '36816', '12345'). Para etiquetas, usa el número de etiqueta (ej: '101') o chunk_id (ej: 'etiqueta_101'). Para cotizaciones, usa el número de ticket (i_issue_id, mismo que el ticket) o chunk_id (ej: 'quote_1054'). IMPORTANTE: Las cotizaciones comparten el mismo ID que los tickets (i_issue_id = ticket ID), puedes usar el mismo ID para obtener el ticket completo con type='ticket'."},
                 "include_comments": {"type": "boolean", "default": True},
                 "universe": {
                     "type": "string",
@@ -159,6 +163,47 @@ TOOLS: List[Dict[str, Any]] = [
                 },
             },
             "required": ["user_question"],
+        },
+    },
+    {
+        "type": "function",
+        "name": "analyze_client_email",
+        "description": (
+            "Analiza un correo de cliente para determinar contexto, tickets relacionados con soluciones y siguientes pasos. "
+            "Úsalo cuando el usuario adjunte o mencione un correo de cliente. "
+            "Este tool automáticamente: extrae conceptos clave del problema/situación/requerimiento, "
+            "busca tickets similares en histórico para ver si hay soluciones, y obtiene el procedimiento de atención completo."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "email_content": {
+                    "type": "string",
+                    "description": "El contenido completo del correo del cliente (asunto, cuerpo, información del remitente).",
+                },
+            },
+            "required": ["email_content"],
+        },
+    },
+    {
+        "type": "function",
+        "name": "propose_next_steps",
+        "description": (
+            "Analiza un ticket y propone los siguientes pasos basándose en el procedimiento de atención. "
+            "Úsalo cuando el usuario pregunte '¿qué hago ahora?' o 'siguientes pasos' al analizar un ticket. "
+            "Este tool automáticamente: obtiene el ticket completo, obtiene el documento completo del "
+            "Procedimiento de Solicitud de atención (P-OPR-01), y propone acciones basadas en el estatus "
+            "y contenido del ticket según el procedimiento."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "ticket_id": {
+                    "type": "string",
+                    "description": "El ID o número del ticket a analizar (ej: '17532', '12345').",
+                },
+            },
+            "required": ["ticket_id"],
         },
     },
     {

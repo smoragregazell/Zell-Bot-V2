@@ -208,7 +208,7 @@
             // Cargar el widget si no está cargado
             if (!widgetCargado) {
                 const script = document.createElement('script');
-                script.src = 'chat-widget-v2.js';
+                script.src = 'chat-widget-mock.js';
                 script.onload = () => {
                     mostrarStatus('✅ Widget cargado correctamente. Busca el botón "IA" en la esquina inferior izquierda.', 'success');
                     widgetCargado = true;

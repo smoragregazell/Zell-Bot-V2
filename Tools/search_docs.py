@@ -71,10 +71,13 @@ def search_docs(query: str, universe: str, top_k: int = 5) -> Dict[str, Any]:
     
     Retorna hits con chunk_id + metadata ligera (sin texto completo pesado).
     
+    Para meetings_weekly, aplica filtro de similitud: solo retorna resultados con score <= 0.6
+    (muy relevantes: < 0.4, relevantes: 0.4-0.6, irrelevantes: > 0.6 son filtrados).
+    
     Args:
         query: Texto de búsqueda
-        universe: Nombre del universo (ej: "docs_org", "docs_iso", "user_guides")
-        top_k: Número de resultados a retornar
+        universe: Nombre del universo (ej: "docs_org", "docs_iso", "user_guides", "meetings_weekly")
+        top_k: Número de resultados a retornar (máximo antes del filtro de similitud)
     
     Returns:
         Dict con formato:
@@ -85,7 +88,7 @@ def search_docs(query: str, universe: str, top_k: int = 5) -> Dict[str, Any]:
             "hits": [
                 {
                     "rank": int,
-                    "score": float,
+                    "score": float,  # Para meetings_weekly, solo scores <= 0.6
                     "chunk_id": str,
                     "doc_id": str,
                     "title": str,
@@ -115,10 +118,21 @@ def search_docs(query: str, universe: str, top_k: int = 5) -> Dict[str, Any]:
     q = _normalize(np.array(emb, dtype=np.float32)).reshape(1, -1)
     scores, ids = index.search(q, top_k)
 
+    # Umbral de similitud para meetings_weekly: solo retornar resultados relevantes (score <= 0.6)
+    # Score < 0.4: muy relevante, Score 0.4-0.6: relevante, Score > 0.6: irrelevante
+    similarity_threshold = 0.6 if universe == "meetings_weekly" else None
+
     hits = []
     for rank, i in enumerate(ids[0].tolist()):
         if i < 0 or i >= len(meta):
             continue
+        
+        score = float(scores[0][rank])
+        
+        # Filtrar por umbral de similitud para meetings_weekly
+        if similarity_threshold is not None and score > similarity_threshold:
+            continue
+        
         m = meta[i]
         # Construir metadata según tipo de documento
         metadata = {
@@ -155,8 +169,8 @@ def search_docs(query: str, universe: str, top_k: int = 5) -> Dict[str, Any]:
             metadata["referencia_cliente_ticket"] = m.get("referencia_cliente_ticket")
         
         hits.append({
-            "rank": rank + 1,
-            "score": float(scores[0][rank]),
+            "rank": len(hits) + 1,  # Re-numerar después del filtro
+            "score": score,
             "chunk_id": m.get("chunk_id"),
             "doc_id": m.get("doc_id"),
             "title": m.get("catalog_title") or m.get("title"),
