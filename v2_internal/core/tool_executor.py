@@ -7,7 +7,7 @@ import time
 from typing import Any, Dict, List
 
 from ..live_steps import tr
-from ..tools import TOOL_IMPL
+from ..tool_description import TOOL_IMPL
 from ..context_manager import (
     can_use_web_search,
     get_web_search_count,

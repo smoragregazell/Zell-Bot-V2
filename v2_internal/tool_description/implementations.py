@@ -1,6 +1,8 @@
 """
 Implementaciones de herramientas para chat_v2
 """
+import os
+import re
 from typing import Any, Dict
 
 from Tools.get_tickets import (
@@ -57,6 +59,15 @@ def tool_search_knowledge(args: Dict[str, Any], conversation_id: str) -> Dict[st
 
     hits: list[Dict[str, Any]] = []
     notes: list[str] = []
+    
+    # Si universe="all", buscar en todos los scopes automáticamente
+    # y ajustar top_k para obtener top_k por cada categoría (no global)
+    if universe == "all":
+        scope = "all"
+        # Cuando es "all", queremos top_k resultados POR CADA categoría, no global
+        # Mantener top_k original para cada búsqueda individual
+        tr(f"universe='all' detectado: buscando en todos los scopes (tickets, quotes, etiquetas, docs)")
+        tr(f"Obtendrá hasta {top_k} resultados por cada categoría (tickets, quotes, etiquetas, cada universo de docs)")
 
     # ---- TICKETS ----
     if scope in ("tickets", "all"):
@@ -234,7 +245,7 @@ def tool_search_knowledge(args: Dict[str, Any], conversation_id: str) -> Dict[st
         # Si universe="all", buscar en todos los universos disponibles
         if universe == "all":
             available_universes = ["docs_org", "user_guides", "meetings_weekly"]
-            tr(f"Buscando en todos los universos: {available_universes}")
+            tr(f"Buscando en todos los universos de docs: {available_universes}")
             all_dhits = []
             
             for uni in available_universes:
@@ -349,12 +360,71 @@ def tool_search_knowledge(args: Dict[str, Any], conversation_id: str) -> Dict[st
                         }
                     )
 
-    final_hits = _dedupe_hits(hits, top_k=top_k)
+    # Si universe="all", NO aplicar top_k global (queremos resultados de todas las categorías)
+    # Solo aplicar dedupe para eliminar duplicados
+    if universe == "all":
+        # Para "all", mantener todos los hits de cada categoría (ya limitados por top_k en cada búsqueda)
+        final_hits = _dedupe_hits(hits, top_k=9999)  # Dedupe sin límite global
+    else:
+        # Para búsquedas normales, aplicar top_k global
+        final_hits = _dedupe_hits(hits, top_k=top_k)
+    
     total_found = len(final_hits)
     if total_found > 0:
         tr(f"Total de resultados encontrados: {total_found}")
     else:
         tr(f"Sin resultados en ninguna fuente")
+    
+    # Si universe="all", estructurar resultados por categoría
+    if universe == "all":
+        results_by_category = {
+            "tickets": [],
+            "quotes": [],
+            "etiquetas": [],
+            "meetings_weekly": [],
+            "user_guides": [],
+            "docs_org": [],
+        }
+        
+        for hit in final_hits:
+            hit_type = hit.get("type", "")
+            if hit_type == "ticket":
+                results_by_category["tickets"].append(hit)
+            elif hit_type == "quote":
+                results_by_category["quotes"].append(hit)
+            elif hit_type == "etiqueta":
+                results_by_category["etiquetas"].append(hit)
+            elif hit_type == "doc":
+                doc_universe = hit.get("metadata", {}).get("universe", "")
+                if doc_universe == "meetings_weekly":
+                    results_by_category["meetings_weekly"].append(hit)
+                elif doc_universe == "user_guides":
+                    results_by_category["user_guides"].append(hit)
+                elif doc_universe == "docs_org":
+                    results_by_category["docs_org"].append(hit)
+                else:
+                    # Si no tiene universe claro, ponerlo en docs_org por defecto
+                    results_by_category["docs_org"].append(hit)
+        
+        # Ordenar cada categoría según su sistema de scoring:
+        # - Tickets: mayor score = mejor (similitud 0-1)
+        # - Quotes/Etiquetas: mayor score = mejor (producto interno, típicamente > 0.80)
+        # - Docs: menor score = mejor (distancia FAISS, típicamente < 0.6)
+        results_by_category["tickets"].sort(key=lambda x: float(x.get("score", 0)), reverse=True)
+        results_by_category["quotes"].sort(key=lambda x: float(x.get("score", 0)), reverse=True)
+        results_by_category["etiquetas"].sort(key=lambda x: float(x.get("score", 0)), reverse=True)
+        # Docs ya vienen ordenados por menor score (mejor) desde search_docs
+        results_by_category["meetings_weekly"].sort(key=lambda x: float(x.get("score", 999)))
+        results_by_category["user_guides"].sort(key=lambda x: float(x.get("score", 999)))
+        results_by_category["docs_org"].sort(key=lambda x: float(x.get("score", 999)))
+        
+        return {
+            "hits": final_hits,
+            "notes": notes,
+            "results_by_category": results_by_category,
+            "universe_all": True,
+        }
+    
     return {"hits": final_hits, "notes": notes}
 
 
@@ -593,8 +663,8 @@ async def tool_query_tickets(args: Dict[str, Any], conversation_id: str) -> Dict
 
 async def tool_analyze_client_email(args: Dict[str, Any], conversation_id: str) -> Dict[str, Any]:
     """
-    Tool para analizar correos de clientes: extrae conceptos clave, busca tickets similares con soluciones,
-    y obtiene el procedimiento de atención para proponer siguientes pasos.
+    Tool para analizar correos de clientes: retorna el correo completo y obtiene el procedimiento de atención.
+    El LLM central debe extraer el bloque relevante del correo y hacer las búsquedas semánticas con search_knowledge.
     """
     email_content = (args.get("email_content") or "").strip()
     
@@ -608,54 +678,10 @@ async def tool_analyze_client_email(args: Dict[str, Any], conversation_id: str) 
     
     result: Dict[str, Any] = {
         "email_content": email_content,
-        "similar_tickets_hits": [],
-        "similar_tickets_details": [],
         "procedure_document": None,
     }
     
-    # 1. Buscar tickets similares usando búsqueda semántica del contenido del correo
-    # (extrae automáticamente conceptos clave del problema/situación/requerimiento)
-    tr(f"Buscando tickets similares al contenido del correo (búsqueda semántica)...")
-    try:
-        similar_result = tool_search_knowledge(
-            {
-                "query": email_content,
-                "scope": "tickets",
-                "policy": "semantic",
-                "top_k": 5,  # Buscar más tickets para encontrar soluciones
-            },
-            conversation_id
-        )
-        if similar_result.get("hits"):
-            result["similar_tickets_hits"] = similar_result.get("hits", [])
-            tr(f"Encontrados {len(result['similar_tickets_hits'])} tickets similares")
-            
-            # 2. Obtener detalles de los tickets más relevantes (top 2-3) para ver si tienen soluciones
-            top_tickets_to_get = min(3, len(result["similar_tickets_hits"]))
-            tr(f"Obteniendo detalles de los {top_tickets_to_get} tickets más relevantes para buscar soluciones...")
-            
-            for i, hit in enumerate(result["similar_tickets_hits"][:top_tickets_to_get]):
-                ticket_id = hit.get("id")
-                if ticket_id:
-                    try:
-                        ticket_detail = tool_get_item(
-                            {"type": "ticket", "id": ticket_id, "include_comments": True},
-                            conversation_id
-                        )
-                        if "error" not in ticket_detail:
-                            result["similar_tickets_details"].append({
-                                "ticket_id": ticket_id,
-                                "score": hit.get("score"),
-                                "ticket_data": ticket_detail.get("ticket_data"),
-                                "ticket_comments": ticket_detail.get("ticket_comments"),
-                            })
-                            tr(f"Ticket #{ticket_id} obtenido")
-                    except Exception as e:
-                        tr(f"Error al obtener ticket #{ticket_id}: {e}")
-    except Exception as e:
-        tr(f"Error al buscar tickets similares: {e}")
-    
-    # 3. Obtener el documento completo del Procedimiento P-OPR-01
+    # Obtener el documento completo del Procedimiento P-OPR-01
     tr(f"Obteniendo documento completo P-OPR-01 (doc_id: {P_OPR_01_DOC_ID})...")
     try:
         doc_result = get_doc_context(
@@ -679,9 +705,9 @@ async def tool_analyze_client_email(args: Dict[str, Any], conversation_id: str) 
     
     result["ok"] = True
     result["note"] = (
-        "Información del correo, tickets similares (con detalles para buscar soluciones) y procedimiento obtenidos. "
-        "Analiza los conceptos clave del problema/situación/requerimiento, revisa si hay soluciones en los tickets similares, "
-        "y propone siguientes pasos según el procedimiento P-OPR-01."
+        "Correo completo recibido. Debes extraer el bloque relevante del correo (sin saludos/despedidas) "
+        "y usar ese bloque para hacer búsquedas semánticas en tickets y cotizaciones con search_knowledge. "
+        "Luego propone siguientes pasos según el procedimiento P-OPR-01."
     )
     
     return result
@@ -689,8 +715,10 @@ async def tool_analyze_client_email(args: Dict[str, Any], conversation_id: str) 
 
 async def tool_propose_next_steps(args: Dict[str, Any], conversation_id: str) -> Dict[str, Any]:
     """
-    Tool para proponer siguientes pasos basándose en un ticket y el procedimiento de atención.
-    Obtiene el ticket completo y el documento completo del Procedimiento P-OPR-01.
+    Tool para proponer siguientes pasos basándose en un ticket.
+    Obtiene el ticket completo, construye query concatenando título y descripción,
+    hace búsquedas semánticas en tickets y cotizaciones (top_k=3), obtiene los items completos,
+    y obtiene el procedimiento de atención (P-OPR-01).
     """
     ticket_id = str(args.get("ticket_id") or "").strip()
     
@@ -698,6 +726,9 @@ async def tool_propose_next_steps(args: Dict[str, Any], conversation_id: str) ->
         return {"error": "ticket_id es requerido"}
     
     tr(f"Analizando ticket #{ticket_id} para proponer siguientes pasos...")
+    
+    # Constante del doc_id del procedimiento P-OPR-01
+    P_OPR_01_DOC_ID = "077d56bcd4cf"
     
     # 1. Obtener el ticket completo
     try:
@@ -715,51 +746,150 @@ async def tool_propose_next_steps(args: Dict[str, Any], conversation_id: str) ->
         tr(f"Excepción al obtener ticket: {e}")
         return {"error": f"Error al obtener ticket: {str(e)}"}
     
-    # 2. Obtener el documento completo del Procedimiento P-OPR-01
-    # doc_id conocido del documento P-OPR-01 Procedimiento de Solicitud de atención
-    P_OPR_01_DOC_ID = "077d56bcd4cf"
+    ticket_data = ticket_result.get("ticket_data", {})
+    ticket_comments = ticket_result.get("ticket_comments", [])
     
+    # 2. Construir query concatenando título y descripción
+    query_parts = []
+    title = ticket_data.get("Titulo") or ticket_data.get("title") or ""
+    description = ticket_data.get("Descripcion") or ticket_data.get("description") or ""
+    
+    if title:
+        query_parts.append(title)
+    if description:
+        query_parts.append(description)
+    
+    search_query = " ".join(query_parts).strip()
+    if not search_query:
+        search_query = f"ticket {ticket_id}"
+    
+    tr(f"Query construida (título + descripción) para búsqueda semántica: {search_query[:100]}...")
+    
+    # 4. Búsqueda semántica en tickets (top_k=3)
+    similar_tickets_ids = []
+    try:
+        tr(f"Buscando tickets similares (top_k=3)...")
+        tickets_search_result = tool_search_knowledge(
+            {
+                "query": search_query,
+                "scope": "tickets",
+                "policy": "semantic",
+                "top_k": 3,
+            },
+            conversation_id
+        )
+        if tickets_search_result.get("hits"):
+            for hit in tickets_search_result.get("hits", []):
+                hit_ticket_id = hit.get("id")
+                if hit_ticket_id and hit_ticket_id != ticket_id:  # Excluir el ticket actual
+                    similar_tickets_ids.append(hit_ticket_id)
+            tr(f"Encontrados {len(similar_tickets_ids)} tickets similares")
+    except Exception as e:
+        tr(f"Error al buscar tickets similares: {e}")
+    
+    # 5. Búsqueda semántica en cotizaciones (top_k=3)
+    similar_quotes_metadata = []
+    try:
+        tr(f"Buscando cotizaciones similares (top_k=3)...")
+        quotes_search_result = tool_search_knowledge(
+            {
+                "query": search_query,
+                "scope": "quotes",
+                "policy": "semantic",
+                "top_k": 3,
+            },
+            conversation_id
+        )
+        if quotes_search_result.get("hits"):
+            for hit in quotes_search_result.get("hits", []):
+                # El id en el hit es i_issue_id, y también está en metadata
+                issue_id = hit.get("id") or hit.get("metadata", {}).get("i_issue_id")
+                if issue_id:
+                    similar_quotes_metadata.append({
+                        "i_issue_id": str(issue_id),
+                        "i_quote_id": hit.get("metadata", {}).get("i_quote_id"),
+                        "metadata": hit.get("metadata", {}),
+                    })
+            tr(f"Encontradas {len(similar_quotes_metadata)} cotizaciones similares")
+    except Exception as e:
+        tr(f"Error al buscar cotizaciones similares: {e}")
+    
+    # 6. Obtener tickets similares completos
+    similar_tickets_data = []
+    for similar_ticket_id in similar_tickets_ids:
+        try:
+            tr(f"Obteniendo ticket completo #{similar_ticket_id}...")
+            similar_ticket_result = tool_get_item(
+                {"type": "ticket", "id": similar_ticket_id, "include_comments": True},
+                conversation_id
+            )
+            if "error" not in similar_ticket_result:
+                similar_tickets_data.append({
+                    "ticket_id": similar_ticket_id,
+                    "ticket_data": similar_ticket_result.get("ticket_data"),
+                    "ticket_comments": similar_ticket_result.get("ticket_comments", []),
+                })
+        except Exception as e:
+            tr(f"Error al obtener ticket #{similar_ticket_id}: {e}")
+    
+    # 7. Obtener cotizaciones similares completas
+    similar_quotes_data = []
+    for quote_meta in similar_quotes_metadata:
+        issue_id = quote_meta.get("i_issue_id")
+        try:
+            tr(f"Obteniendo cotización completa (i_issue_id: {issue_id})...")
+            quote_result = tool_get_item(
+                {"type": "quote", "id": issue_id},
+                conversation_id
+            )
+            if "error" not in quote_result and quote_result.get("ok"):
+                quotes_list = quote_result.get("quotes", [])
+                if quotes_list:
+                    similar_quotes_data.append({
+                        "i_issue_id": issue_id,
+                        "i_quote_id": quote_meta.get("i_quote_id"),
+                        "quote_data": quotes_list[0],  # Primera cotización encontrada
+                    })
+        except Exception as e:
+            tr(f"Error al obtener cotización (i_issue_id: {issue_id}): {e}")
+    
+    # 8. Obtener el documento completo del Procedimiento P-OPR-01
     tr(f"Obteniendo documento completo P-OPR-01 (doc_id: {P_OPR_01_DOC_ID})...")
+    procedure_document = None
     try:
         doc_result = get_doc_context(
             universe="docs_org",
             doc_id=P_OPR_01_DOC_ID,
             max_chunks=9999  # Obtener todos los chunks
         )
-        
-        if not doc_result.get("ok"):
-            tr(f"Error al obtener documento P-OPR-01: {doc_result.get('error')}")
-            return {
-                "error": f"No se pudo obtener el documento P-OPR-01: {doc_result.get('error')}",
-                "ticket_data": ticket_result.get("ticket_data"),
-                "ticket_comments": ticket_result.get("ticket_comments"),
+        if doc_result.get("ok"):
+            blocks_count = len(doc_result.get("blocks", []))
+            tr(f"Documento P-OPR-01 obtenido: {blocks_count} chunks")
+            procedure_document = {
+                "title": "P-OPR-01 Procedimiento de Solicitud de atención",
+                "doc_id": P_OPR_01_DOC_ID,
+                "blocks": doc_result.get("blocks", []),
+                "total_chunks": blocks_count,
             }
-        
-        blocks_count = len(doc_result.get("blocks", []))
-        tr(f"Documento P-OPR-01 obtenido: {blocks_count} chunks")
+        else:
+            tr(f"Error al obtener documento P-OPR-01: {doc_result.get('error')}")
     except Exception as e:
         tr(f"Excepción al obtener documento: {e}")
-        return {
-            "error": f"Error al obtener documento P-OPR-01: {str(e)}",
-            "ticket_data": ticket_result.get("ticket_data"),
-            "ticket_comments": ticket_result.get("ticket_comments"),
-        }
     
-    # 3. Retornar información estructurada
+    # 9. Retornar información estructurada
     return {
         "ok": True,
         "ticket_id": ticket_id,
-        "ticket_data": ticket_result.get("ticket_data"),
-        "ticket_comments": ticket_result.get("ticket_comments"),
-        "procedure_document": {
-            "title": "P-OPR-01 Procedimiento de Solicitud de atención",
-            "doc_id": P_OPR_01_DOC_ID,
-            "blocks": doc_result.get("blocks", []),
-            "total_chunks": len(doc_result.get("blocks", [])),
-        },
+        "ticket_data": ticket_data,
+        "ticket_comments": ticket_comments,
+        "similar_tickets": similar_tickets_data,
+        "similar_quotes": similar_quotes_data,
+        "procedure_document": procedure_document,
         "note": (
-            "Información del ticket y procedimiento completo obtenidos. "
-            "Analiza el estatus del ticket y el procedimiento para proponer los siguientes pasos."
+            "Ticket analizado, tickets similares, cotizaciones similares y procedimiento obtenidos. "
+            "Busca soluciones en los tickets y cotizaciones similares. "
+            "Usa el procedimiento P-OPR-01 de manera MUY SUTIL solo para analizar el estatus del ticket y mencionar lo que sigue. "
+            "El valor real está en la información de tickets y cotizaciones similares."
         ),
     }
 

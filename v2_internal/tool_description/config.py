@@ -171,8 +171,11 @@ TOOLS: List[Dict[str, Any]] = [
         "description": (
             "Analiza un correo de cliente para determinar contexto, tickets relacionados con soluciones y siguientes pasos. "
             "Úsalo cuando el usuario adjunte o mencione un correo de cliente. "
-            "Este tool automáticamente: extrae conceptos clave del problema/situación/requerimiento, "
-            "busca tickets similares en histórico para ver si hay soluciones, y obtiene el procedimiento de atención completo."
+            "Este tool retorna el correo completo y obtiene el procedimiento de atención (P-OPR-01). "
+            "DESPUÉS de llamar este tool, debes: (1) extraer el bloque relevante del correo (sin saludos/despedidas), "
+            "(2) usar ese bloque relevante para buscar tickets similares con search_knowledge(scope='tickets'), "
+            "(3) usar ese mismo bloque para buscar cotizaciones similares con search_knowledge(scope='quotes'), "
+            "(4) analizar los resultados y proponer siguientes pasos según el procedimiento."
         ),
         "parameters": {
             "type": "object",
@@ -189,11 +192,13 @@ TOOLS: List[Dict[str, Any]] = [
         "type": "function",
         "name": "propose_next_steps",
         "description": (
-            "Analiza un ticket y propone los siguientes pasos basándose en el procedimiento de atención. "
-            "Úsalo cuando el usuario pregunte '¿qué hago ahora?' o 'siguientes pasos' al analizar un ticket. "
-            "Este tool automáticamente: obtiene el ticket completo, obtiene el documento completo del "
-            "Procedimiento de Solicitud de atención (P-OPR-01), y propone acciones basadas en el estatus "
-            "y contenido del ticket según el procedimiento."
+            "Analiza un ticket y propone los siguientes pasos basándose en tickets similares, cotizaciones similares "
+            "y el procedimiento de atención. Úsalo cuando el usuario pregunte '¿qué hago ahora?' o 'siguientes pasos' "
+            "al analizar un ticket. Este tool automáticamente: obtiene el ticket completo, construye query concatenando "
+            "título y descripción, hace búsquedas semánticas en tickets y cotizaciones (top_k=3), obtiene los tickets y cotizaciones "
+            "encontrados completos, y obtiene el procedimiento de atención (P-OPR-01). "
+            "El LLM central debe buscar soluciones en los tickets y cotizaciones similares, y usar el procedimiento "
+            "de manera MUY SUTIL solo para analizar el estatus del ticket."
         ),
         "parameters": {
             "type": "object",

@@ -71,8 +71,11 @@ def search_docs(query: str, universe: str, top_k: int = 5) -> Dict[str, Any]:
     
     Retorna hits con chunk_id + metadata ligera (sin texto completo pesado).
     
-    Para meetings_weekly, aplica filtro de similitud: solo retorna resultados con score <= 0.6
-    (muy relevantes: < 0.4, relevantes: 0.4-0.6, irrelevantes: > 0.6 son filtrados).
+    Usa IndexFlatIP (Inner Product) con vectores normalizados L2 = Cosine Similarity.
+    Mayor score = mayor similitud (mejor).
+    
+    Para meetings_weekly, aplica filtro de similitud: solo retorna resultados con score >= 0.6
+    (Score >= 0.6: relevante, Score < 0.6: filtrado).
     
     Args:
         query: Texto de búsqueda
@@ -118,8 +121,10 @@ def search_docs(query: str, universe: str, top_k: int = 5) -> Dict[str, Any]:
     q = _normalize(np.array(emb, dtype=np.float32)).reshape(1, -1)
     scores, ids = index.search(q, top_k)
 
-    # Umbral de similitud para meetings_weekly: solo retornar resultados relevantes (score <= 0.6)
-    # Score < 0.4: muy relevante, Score 0.4-0.6: relevante, Score > 0.6: irrelevante
+    # Umbral de similitud para meetings_weekly: solo retornar resultados relevantes (score >= 0.6)
+    # IndexFlatIP con vectores normalizados L2 = Cosine Similarity (mayor = mejor)
+    # Score >= 0.6: relevante (mayor similitud coseno)
+    # Score < 0.6: menos relevante, filtrar
     similarity_threshold = 0.6 if universe == "meetings_weekly" else None
 
     hits = []
@@ -130,7 +135,9 @@ def search_docs(query: str, universe: str, top_k: int = 5) -> Dict[str, Any]:
         score = float(scores[0][rank])
         
         # Filtrar por umbral de similitud para meetings_weekly
-        if similarity_threshold is not None and score > similarity_threshold:
+        # Con Cosine Similarity (IndexFlatIP normalizado): mayor = mejor
+        # Filtrar scores BAJOS (< 0.6), mantener scores ALTOS (>= 0.6)
+        if similarity_threshold is not None and score < similarity_threshold:
             continue
         
         m = meta[i]

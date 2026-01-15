@@ -12,7 +12,7 @@ from .context_manager import (
     can_use_web_search,
 )
 from .live_steps import StepEmitter, get_step_emitter, set_step_emitter, tr
-from .tools import TOOLS, SYSTEM_INSTRUCTIONS, TOOL_IMPL
+from .tool_description import TOOLS, SYSTEM_INSTRUCTIONS, TOOL_IMPL
 from .core import process_chat_v2_core
 
 __all__ = [

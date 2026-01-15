@@ -24,7 +24,7 @@ from ..context_manager import (
     clear_conversation_context,
 )
 from ..live_steps import tr, get_step_emitter
-from ..tools import TOOLS, SYSTEM_INSTRUCTIONS, TOOL_IMPL
+from ..tool_description import TOOLS, SYSTEM_INSTRUCTIONS, TOOL_IMPL
 from .tool_executor import execute_tool_call, build_tool_output
 
 

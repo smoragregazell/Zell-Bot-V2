@@ -671,7 +671,7 @@
             title: '🎫 Consulta información de tickets',
             description: 'Busca y consulta información detallada de tickets del sistema. Puedes buscar por número específico, palabras clave, o usar búsqueda semántica para encontrar tickets relacionados.',
             examples: [
-                'Muéstrame el ticket 36816',
+                'Muéstrame el ticket 36451',
                 '¿En qué ticket se habló de migración ISSTEY?',
                 'Busca tickets sobre domiciliación',
                 'Tickets abiertos por Javier en diciembre'
